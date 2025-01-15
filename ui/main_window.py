@@ -25,7 +25,7 @@ class MainWindow:
         self.model_frame.pack(fill=tk.X, padx=10, pady=5)
         
         # File Selection
-        self.file_frame = FileSelectionFrame(self.master)
+        self.file_frame = FileSelectionFrame(self.master, self.app)
         self.file_frame.pack(fill=tk.X, padx=10, pady=5)
         
         # Progress Display

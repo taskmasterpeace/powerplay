@@ -33,8 +33,9 @@ class ModelSelectionFrame(ttk.LabelFrame):
         self.speaker_check.pack(pady=5)
 
 class FileSelectionFrame(ttk.LabelFrame):
-    def __init__(self, master):
+    def __init__(self, master, app):
         super().__init__(master, text="File Selection")
+        self.app = app
         
         self.folder_path = tk.StringVar()
         ttk.Button(self, text="Select Folder", 
@@ -46,11 +47,11 @@ class FileSelectionFrame(ttk.LabelFrame):
         self.button_frame.pack(fill=tk.X, pady=5)
         
         self.start_button = ttk.Button(self.button_frame, text="Start Transcription",
-                                     command=lambda: master.master.app.start_transcription())
+                                     command=self.app.start_transcription)
         self.start_button.pack(side=tk.LEFT, padx=5)
         
         self.stop_button = ttk.Button(self.button_frame, text="Stop",
-                                    command=lambda: master.master.app.stop_transcription(),
+                                    command=self.app.stop_transcription,
                                     state=tk.DISABLED)
         self.stop_button.pack(side=tk.LEFT, padx=5)
         
