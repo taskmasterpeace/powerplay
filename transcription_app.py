@@ -98,7 +98,11 @@ class TranscriptionApp:
                 transcript = self.current_service.transcribe(file_path, config)
                 
                 # Save transcript
-                # TODO: Implement transcript saving
+                output_file = self.file_handler.generate_output_filename(file_name, "txt")
+                output_path = os.path.join(folder_path, output_file)
+                
+                with open(output_path, "w", encoding="utf-8") as f:
+                    f.write(transcript)
                 
                 self.file_handler.processed_files.append(file_name)
                 self.main_window.progress_frame.add_file_result(file_name, "Success")

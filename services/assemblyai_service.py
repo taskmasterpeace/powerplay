@@ -23,4 +23,15 @@ class AssemblyAITranscriptionService(TranscriptionService):
             transcription_config
         )
         
-        return transcript
+        if transcript.status == aai.TranscriptStatus.error:
+            raise Exception(f"Transcription failed: {transcript.error}")
+            
+        # Create a formatted transcript with speaker labels if enabled
+        formatted_text = ""
+        if config and config.get('speaker_labels'):
+            for utterance in transcript.utterances:
+                formatted_text += f"Speaker {utterance.speaker}: {utterance.text}\n"
+        else:
+            formatted_text = transcript.text
+            
+        return formatted_text
