@@ -75,9 +75,19 @@ class ProgressFrame(ttk.LabelFrame):
     def __init__(self, master):
         super().__init__(master, text="Progress")
         
+        # Status label
+        self.status_var = tk.StringVar(value="Ready")
+        self.status_label = ttk.Label(self, textvariable=self.status_var)
+        self.status_label.pack(fill=tk.X, padx=5, pady=5)
+        
         # Overall progress
         self.overall_progress = ttk.Progressbar(self, mode='determinate')
         self.overall_progress.pack(fill=tk.X, padx=5, pady=5)
+        
+        # Current file label
+        self.current_file_var = tk.StringVar()
+        self.current_file_label = ttk.Label(self, textvariable=self.current_file_var)
+        self.current_file_label.pack(fill=tk.X, padx=5, pady=5)
         
         # Scrollable frame for individual file progress
         self.create_scrollable_frame()
@@ -115,3 +125,18 @@ class ProgressFrame(ttk.LabelFrame):
         
     def _on_mouse_wheel(self, event):
         self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        
+    def update_progress(self, current_file, processed_count, total_count):
+        self.status_var.set(f"Processing: {processed_count}/{total_count} files")
+        self.current_file_var.set(f"Current file: {current_file}")
+        progress = (processed_count / total_count * 100) if total_count > 0 else 0
+        self.overall_progress['value'] = progress
+        
+    def add_file_result(self, filename, status):
+        result_frame = ttk.Frame(self.scrollable_frame)
+        result_frame.pack(fill=tk.X, padx=5, pady=2)
+        
+        status_color = "green" if status == "Success" else "red"
+        
+        ttk.Label(result_frame, text=filename).pack(side=tk.LEFT)
+        ttk.Label(result_frame, text=status, foreground=status_color).pack(side=tk.RIGHT)

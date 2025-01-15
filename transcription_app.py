@@ -73,12 +73,21 @@ class TranscriptionApp:
     def process_files(self):
         folder_path = self.main_window.file_frame.folder_path.get()
         mp3_files = self.file_handler.get_mp3_files(folder_path)
+        total_files = len(mp3_files)
+        processed_count = 0
+        
+        # Reset progress display
+        self.main_window.progress_frame.status_var.set(f"Starting transcription of {total_files} files...")
+        self.main_window.progress_frame.overall_progress['value'] = 0
         
         for file_name in mp3_files:
             if self.stop_event.is_set():
+                self.main_window.progress_frame.status_var.set("Transcription stopped by user")
                 break
                 
             file_path = os.path.join(folder_path, file_name)
+            self.main_window.progress_frame.update_progress(file_name, processed_count, total_files)
+            
             try:
                 # Get transcription config
                 config = {
@@ -91,11 +100,21 @@ class TranscriptionApp:
                 # Save transcript
                 # TODO: Implement transcript saving
                 
+                self.file_handler.processed_files.append(file_name)
+                self.main_window.progress_frame.add_file_result(file_name, "Success")
+                
             except Exception as e:
                 self.file_handler.skipped_files.append((file_name, str(e)))
+                self.main_window.progress_frame.add_file_result(file_name, f"Failed: {str(e)}")
                 continue
-                
-            self.file_handler.processed_files.append(file_name)
+            
+            processed_count += 1
+            
+        # Update final status
+        final_status = f"Completed: {processed_count}/{total_files} files processed"
+        if self.stop_event.is_set():
+            final_status += " (Stopped by user)"
+        self.main_window.progress_frame.status_var.set(final_status)
             
         # Re-enable start button, disable stop button
         self.main_window.file_frame.start_button.config(state=tk.NORMAL)
