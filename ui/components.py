@@ -90,7 +90,7 @@ class ModelSelectionFrame(ttk.LabelFrame):
         
         # Pack AssemblyAI frame
         self.assemblyai_frame.pack(fill=tk.X, pady=5, padx=5)
-        self.toggle_assemblyai_features()
+        self.toggle_service_options()
         
     def toggle_service_options(self):
         """Enable/disable service specific features based on selection"""
