@@ -22,15 +22,62 @@ class ModelSelectionFrame(ttk.LabelFrame):
         # Service Selection
         self.service_var = tk.StringVar(value="openai")
         ttk.Radiobutton(self, text="OpenAI Whisper", value="openai", 
-                       variable=self.service_var).pack(pady=5)
+                       variable=self.service_var,
+                       command=self.toggle_assemblyai_features).pack(pady=5)
         ttk.Radiobutton(self, text="AssemblyAI", value="assemblyai", 
-                       variable=self.service_var).pack(pady=5)
+                       variable=self.service_var,
+                       command=self.toggle_assemblyai_features).pack(pady=5)
         
-        # Speaker Detection (AssemblyAI only)
+        # Create AssemblyAI features frame
+        self.assemblyai_frame = ttk.LabelFrame(self, text="AssemblyAI Features")
+        
+        # Speaker Detection
         self.speaker_var = tk.BooleanVar(value=False)
-        self.speaker_check = ttk.Checkbutton(self, text="Enable Speaker Detection", 
+        self.speaker_check = ttk.Checkbutton(self.assemblyai_frame, 
+                                           text="Enable Speaker Detection", 
                                            variable=self.speaker_var)
-        self.speaker_check.pack(pady=5)
+        self.speaker_check.pack(pady=2)
+        
+        # Auto Chapters
+        self.chapters_var = tk.BooleanVar(value=False)
+        self.chapters_check = ttk.Checkbutton(self.assemblyai_frame, 
+                                            text="Generate Auto Chapters", 
+                                            variable=self.chapters_var)
+        self.chapters_check.pack(pady=2)
+        
+        # Entity Detection
+        self.entity_var = tk.BooleanVar(value=False)
+        self.entity_check = ttk.Checkbutton(self.assemblyai_frame, 
+                                          text="Enable Entity Detection", 
+                                          variable=self.entity_var)
+        self.entity_check.pack(pady=2)
+        
+        # Key Phrases
+        self.keyphrases_var = tk.BooleanVar(value=False)
+        self.keyphrases_check = ttk.Checkbutton(self.assemblyai_frame, 
+                                               text="Extract Key Phrases", 
+                                               variable=self.keyphrases_var)
+        self.keyphrases_check.pack(pady=2)
+        
+        # Summarization
+        self.summary_var = tk.BooleanVar(value=False)
+        self.summary_check = ttk.Checkbutton(self.assemblyai_frame, 
+                                           text="Generate Summary", 
+                                           variable=self.summary_var)
+        self.summary_check.pack(pady=2)
+        
+        # Pack AssemblyAI frame
+        self.assemblyai_frame.pack(fill=tk.X, pady=5, padx=5)
+        self.toggle_assemblyai_features()
+        
+    def toggle_assemblyai_features(self):
+        """Enable/disable AssemblyAI specific features based on service selection"""
+        if self.service_var.get() == "assemblyai":
+            for child in self.assemblyai_frame.winfo_children():
+                child.configure(state=tk.NORMAL)
+        else:
+            for child in self.assemblyai_frame.winfo_children():
+                child.configure(state=tk.DISABLED)
 
 class FileSelectionFrame(ttk.LabelFrame):
     def __init__(self, master, app):

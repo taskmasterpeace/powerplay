@@ -6,11 +6,19 @@ class FileHandler:
     def __init__(self):
         self.processed_files = []
         self.skipped_files = []
+        self.date_pattern = re.compile(r'^(\d{6})_.*\.mp3$')
         
     def get_mp3_files(self, folder_path):
-        """Return list of MP3 files in the folder"""
-        return [f for f in os.listdir(folder_path) 
-                if f.lower().endswith('.mp3')]
+        """Return list of MP3 files in the folder that match naming convention"""
+        mp3_files = []
+        for f in os.listdir(folder_path):
+            if not f.lower().endswith('.mp3'):
+                continue
+            if not self.date_pattern.match(f):
+                self.skipped_files.append((f, "Invalid filename format. Expected: YYMMDD_filename.mp3"))
+                continue
+            mp3_files.append(f)
+        return mp3_files
     
     def extract_date_from_filename(self, filename):
         """Extract date from filename format YYMMDD_*"""
