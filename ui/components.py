@@ -223,12 +223,23 @@ class ProgressFrame(ttk.LabelFrame):
             
     def view_transcript(self, filename):
         """Open transcript file in default text editor"""
-        folder_path = self.master.master.app.main_window.file_frame.folder_path.get()
+        # Get the folder path directly from the FileSelectionFrame
+        for widget in self.master.master.winfo_children():
+            if isinstance(widget, FileSelectionFrame):
+                folder_path = widget.folder_path.get()
+                break
+        else:
+            print("Could not find FileSelectionFrame")
+            return
+            
         base_name = os.path.splitext(filename)[0]
         transcript_path = os.path.join(folder_path, f"{base_name}_transcript.txt")
         
         if os.path.exists(transcript_path):
-            if platform.system() == "Windows":
-                os.startfile(transcript_path)
-            else:
-                subprocess.call(["xdg-open", transcript_path])
+            try:
+                if platform.system() == "Windows":
+                    os.startfile(transcript_path)
+                else:
+                    subprocess.call(["xdg-open", transcript_path])
+            except Exception as e:
+                print(f"Error opening transcript: {str(e)}")
