@@ -235,14 +235,18 @@ class CalendarView(ttk.Frame):
         selected_date = self.calendar.get_date()
         self.files_label.config(text=f"Files for {selected_date}:")
         
-        # Highlight matching files in listbox
-        for i in range(self.file_listbox.size()):
-            item_text = self.file_listbox.get(i)
-            if item_text.startswith(selected_date):
-                self.file_listbox.selection_set(i)
-                self.file_listbox.see(i)  # Ensure visible
-            else:
-                self.file_listbox.selection_clear(i)
+        # Clear and repopulate listbox with only files from selected date
+        self.file_listbox.delete(0, tk.END)
+        
+        if selected_date in self.audio_files:
+            for file_path in self.audio_files[selected_date]:
+                display_name = f"{selected_date}: {os.path.basename(file_path)}"
+                self.file_listbox.insert(tk.END, display_name)
+                
+                # Color code based on transcript status
+                has_transcript = self.app.file_handler.check_transcript_exists(file_path)
+                color = 'green' if has_transcript else 'red'
+                self.file_listbox.itemconfig(tk.END, {'fg': color})
                 
     def on_file_select(self, event):
         """Handle file selection in listbox"""
@@ -301,25 +305,31 @@ class CalendarView(ttk.Frame):
                 messagebox.showerror("Error", f"Transcription failed: {str(e)}")
                 
     def view_transcript(self):
-        """View transcript for selected file"""
+        """View transcript for selected file and switch to calendar view"""
         selection = self.file_listbox.curselection()
         if not selection:
             messagebox.showwarning("Warning", "Please select a file to view")
             return
             
-        file_name = self.file_listbox.get(selection[0])
-        selected_date = self.calendar.get_date()
+        item_text = self.file_listbox.get(selection[0])
+        # Extract date from item text (format: "YYYY-MM-DD: filename")
+        date_str, file_name = item_text.split(": ", 1)
         
-        # Find full file path
-        file_path = next((fp for fp in self.audio_files[selected_date] 
-                         if os.path.basename(fp) == file_name), None)
-                         
-        if file_path:
-            transcript_path = self.app.file_handler.generate_output_filename(file_path, "txt")
-            if os.path.exists(transcript_path):
-                if platform.system() == "Windows":
-                    os.startfile(transcript_path)
+        # Switch to calendar view and select date
+        self.calendar.selection_set(datetime.strptime(date_str, '%Y-%m-%d').date())
+        self.calendar.see(datetime.strptime(date_str, '%Y-%m-%d').date())
+        self.on_date_select(None)  # Update file list for selected date
+        
+        # Find and open transcript
+        if date_str in self.audio_files:
+            file_path = next((fp for fp in self.audio_files[date_str] 
+                            if os.path.basename(fp) == file_name), None)
+            if file_path:
+                transcript_path = self.app.file_handler.generate_output_filename(file_path, "txt")
+                if os.path.exists(transcript_path):
+                    if platform.system() == "Windows":
+                        os.startfile(transcript_path)
+                    else:
+                        subprocess.call(["xdg-open", transcript_path])
                 else:
-                    subprocess.call(["xdg-open", transcript_path])
-            else:
-                messagebox.showinfo("Info", "No transcript found for this file")
+                    messagebox.showinfo("Info", "No transcript found for this file")
