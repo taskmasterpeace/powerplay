@@ -94,7 +94,7 @@ class FileSelectionFrame(ttk.LabelFrame):
         self.button_frame.pack(fill=tk.X, pady=5)
         
         self.start_button = ttk.Button(self.button_frame, text="Start Transcription",
-                                     command=lambda: print("Button clicked") or self.app.start_transcription())
+                                     command=self.app.start_transcription)
         self.start_button.pack(side=tk.LEFT, padx=5)
         
         self.stop_button = ttk.Button(self.button_frame, text="Stop",
