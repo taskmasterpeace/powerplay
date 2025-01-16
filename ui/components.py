@@ -94,7 +94,7 @@ class FileSelectionFrame(ttk.LabelFrame):
         self.button_frame.pack(fill=tk.X, pady=5)
         
         self.start_button = ttk.Button(self.button_frame, text="Start Transcription",
-                                     command=self.app.start_transcription)
+                                     command=lambda: print("Button clicked") or self.app.start_transcription())
         self.start_button.pack(side=tk.LEFT, padx=5)
         
         self.stop_button = ttk.Button(self.button_frame, text="Stop",
@@ -106,17 +106,6 @@ class FileSelectionFrame(ttk.LabelFrame):
         folder_path = filedialog.askdirectory()
         if folder_path:
             self.folder_path.set(folder_path)
-            
-        # Add control buttons
-        if not hasattr(self, 'button_frame'):
-            self.button_frame = ttk.Frame(self)
-            self.button_frame.pack(fill=tk.X, pady=5)
-            
-            self.start_button = ttk.Button(self.button_frame, text="Start Transcription")
-            self.start_button.pack(side=tk.LEFT, padx=5)
-            
-            self.stop_button = ttk.Button(self.button_frame, text="Stop", state=tk.DISABLED)
-            self.stop_button.pack(side=tk.LEFT, padx=5)
 
 class ProgressFrame(ttk.LabelFrame):
     def __init__(self, master):

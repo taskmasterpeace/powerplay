@@ -28,6 +28,7 @@ class TranscriptionApp:
         self.current_service = None
         
     def start_transcription(self):
+        print("Starting transcription...")
         # Get API keys
         openai_key = self.main_window.api_frame.openai_key.get()
         assemblyai_key = self.main_window.api_frame.assemblyai_key.get()
