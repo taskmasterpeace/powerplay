@@ -112,8 +112,14 @@ class TranscriptionApp:
                 output_file = self.file_handler.generate_output_filename(file_name, "txt")
                 output_path = os.path.join(folder_path, output_file)
                 
-                with open(output_path, "w", encoding="utf-8") as f:
-                    f.write(transcript)
+                print(f"Saving transcript to: {output_path}")  # Debug print
+                try:
+                    with open(output_path, "w", encoding="utf-8") as f:
+                        f.write(transcript)
+                    print(f"Successfully saved transcript to: {output_path}")  # Debug print
+                except Exception as e:
+                    print(f"Error saving transcript: {str(e)}")  # Debug print
+                    raise
                 
                 self.file_handler.processed_files.append(file_name)
                 self.main_window.progress_frame.add_file_result(file_name, "Success")
