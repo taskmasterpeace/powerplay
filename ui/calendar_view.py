@@ -103,8 +103,10 @@ class CalendarView(ttk.Frame):
         """Select folder and load all audio files"""
         folder_path = filedialog.askdirectory()
         if folder_path:
+            print(f"Selected folder: {folder_path}")  # Debug print
             self.current_folder = folder_path
             self.folder_path.set(folder_path)
+            # Get both MP3 files and transcript files
             self.load_files_from_folder(folder_path)
             
     def load_files_from_folder(self, folder_path):
@@ -121,8 +123,10 @@ class CalendarView(ttk.Frame):
         
         earliest_date = None
         
+        # Process each MP3 file
         for file_name in mp3_files:
             file_path = os.path.join(folder_path, file_name)
+            
             # Try to get date from filename first
             date_match = re.match(r'^(\d{2})(\d{2})(\d{2})_', os.path.basename(file_path))
             if date_match:
@@ -147,8 +151,10 @@ class CalendarView(ttk.Frame):
             self.audio_files[date_str].append(file_path)
             print(f"Added file to date {date_str}: {file_path}")  # Debug print
             
-            # Add to listbox immediately
-            self.file_listbox.insert(tk.END, f"{date_str}: {os.path.basename(file_path)}")
+            # Add to listbox immediately with date prefix
+            display_name = f"{date_str}: {os.path.basename(file_path)}"
+            self.file_listbox.insert(tk.END, display_name)
+            
             # Color code based on transcript status
             has_transcript = self.app.file_handler.check_transcript_exists(file_path)
             color = 'green' if has_transcript else 'red'
@@ -192,10 +198,12 @@ class CalendarView(ttk.Frame):
                 tag = 'has_transcript' if has_transcript else 'no_transcript'
                 print(f"Setting calendar date: {date} with tag {tag}")  # Debug print
                 
-                # Force calendar to select and show the date
-                self.calendar.selection_set(date)
-                self.calendar.see(date)
+                # Create the calendar event first
                 self.calendar.calevent_create(date, tag, 'Files Available')
+                
+                # Then force calendar to show and select the date
+                self.calendar.see(date)
+                self.calendar.selection_set(date)
                 
                 print(f"Created event for {date} with tag {tag}")  # Debug print
                 
@@ -207,8 +215,9 @@ class CalendarView(ttk.Frame):
         self.calendar.tag_config('has_transcript', background='#90EE90')  # Light green
         self.calendar.tag_config('no_transcript', background='#FFB6C6')  # Light pink
         
-        # Force calendar update
+        # Force calendar update and redraw
         self.calendar.update()
+        self.calendar.update_idletasks()
                 
     def get_transcription_status(self, file_path):
         """Get the processing status of a file"""
