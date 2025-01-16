@@ -5,6 +5,7 @@ from datetime import datetime
 import os
 import platform
 import subprocess
+import re
 
 class CalendarView(ttk.Frame):
     """
@@ -115,17 +116,25 @@ class CalendarView(ttk.Frame):
         
         for file_name in mp3_files:
             file_path = os.path.join(folder_path, file_name)
-            # Get creation date
-            creation_date = self.app.file_handler.get_creation_date(file_path)
-            date_str = creation_date.strftime('%Y-%m-%d')
-            
-            # Store in audio_files dictionary
-            if date_str not in self.audio_files:
-                self.audio_files[date_str] = []
-            self.audio_files[date_str].append(file_path)
-            
+            # Extract date from filename using YYMMDD convention
+            date_match = re.match(r'^(\d{2})(\d{2})(\d{2})_', os.path.basename(file_path))
+            if date_match:
+                year, month, day = date_match.groups()
+                # Convert to full date string (assuming 20xx for year)
+                date_str = f"20{year}-{month}-{day}"
+                
+                # Store in audio_files dictionary
+                if date_str not in self.audio_files:
+                    self.audio_files[date_str] = []
+                self.audio_files[date_str].append(file_path)
+        
         # Update calendar display
         self.mark_dates_with_files()
+        
+        # Select current date and show files
+        current_date = datetime.now().strftime('%Y-%m-%d')
+        self.calendar.selection_set(current_date)
+        self.on_date_select(None)  # Update file list for current date
         
     def mark_dates_with_files(self):
         """Highlight dates that have audio files"""
@@ -135,10 +144,20 @@ class CalendarView(ttk.Frame):
         # Mark dates with files
         for date_str in self.audio_files.keys():
             date = datetime.strptime(date_str, '%Y-%m-%d')
-            self.calendar.calevent_create(date, 'has_files', 'Files Available')
+            
+            # Check if any files on this date have transcripts
+            has_transcript = any(
+                self.app.file_handler.check_transcript_exists(file_path)
+                for file_path in self.audio_files[date_str]
+            )
+            
+            # Create event with appropriate tag
+            tag = 'has_transcript' if has_transcript else 'no_transcript'
+            self.calendar.calevent_create(date, tag, 'Files Available')
         
-        # Configure tag
-        self.calendar.tag_config('has_files', background='lightblue')
+        # Configure tags
+        self.calendar.tag_config('has_transcript', background='lightgreen')
+        self.calendar.tag_config('no_transcript', background='lightpink')
                 
     def get_transcription_status(self, file_path):
         """Get the processing status of a file"""
