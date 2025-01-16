@@ -3,6 +3,7 @@ from tkinter import ttk, filedialog, messagebox
 import os
 from datetime import datetime
 import time
+import pyaudio
 from moviepy.editor import VideoFileClip
 from utils.audio_recorder import AudioRecorder
 
