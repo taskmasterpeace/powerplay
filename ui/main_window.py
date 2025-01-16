@@ -42,5 +42,5 @@ class MainWindow:
         
         # Calendar View
         from .calendar_view import CalendarView
-        self.calendar_view = CalendarView(self.notebook)
+        self.calendar_view = CalendarView(self.notebook, self.app)  # Pass app reference
         self.notebook.add(self.calendar_view, text="Calendar View")
