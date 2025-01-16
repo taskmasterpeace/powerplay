@@ -30,16 +30,19 @@ class TranscriptionApp:
     def start_transcription(self):
         print("Starting transcription...")
         # Get API keys
+        print("Getting API keys...")
         openai_key = self.main_window.api_frame.openai_key.get()
         assemblyai_key = self.main_window.api_frame.assemblyai_key.get()
         
         # Get selected service
         service = self.main_window.model_frame.service_var.get()
+        print(f"Selected service: {service}")
         
         # Get folder path
         folder_path = self.main_window.file_frame.folder_path.get()
         
         if not folder_path:
+            print("No folder selected")
             messagebox.showerror("Error", "Please select a folder first.")
             return
             
@@ -72,8 +75,11 @@ class TranscriptionApp:
         threading.Thread(target=self.process_files, daemon=True).start()
         
     def process_files(self):
+        print("Starting process_files")
         folder_path = self.main_window.file_frame.folder_path.get()
+        print(f"Folder path: {folder_path}")
         mp3_files = self.file_handler.get_mp3_files(folder_path)
+        print(f"Found MP3 files: {mp3_files}")
         total_files = len(mp3_files)
         processed_count = 0
         

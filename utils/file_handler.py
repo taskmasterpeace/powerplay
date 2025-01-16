@@ -10,14 +10,22 @@ class FileHandler:
         
     def get_mp3_files(self, folder_path):
         """Return list of MP3 files in the folder that match naming convention"""
+        print(f"Scanning folder: {folder_path}")
         mp3_files = []
-        for f in os.listdir(folder_path):
-            if not f.lower().endswith('.mp3'):
-                continue
-            if not self.date_pattern.match(f):
-                self.skipped_files.append((f, "Invalid filename format. Expected: YYMMDD_filename.mp3"))
-                continue
-            mp3_files.append(f)
+        try:
+            for f in os.listdir(folder_path):
+                print(f"Checking file: {f}")
+                if not f.lower().endswith('.mp3'):
+                    print(f"Skipping non-MP3 file: {f}")
+                    continue
+                if not self.date_pattern.match(f):
+                    print(f"Skipping file with invalid format: {f}")
+                    self.skipped_files.append((f, "Invalid filename format. Expected: YYMMDD_filename.mp3"))
+                    continue
+                mp3_files.append(f)
+                print(f"Added valid MP3 file: {f}")
+        except Exception as e:
+            print(f"Error scanning folder: {str(e)}")
         return mp3_files
     
     def extract_date_from_filename(self, filename):
