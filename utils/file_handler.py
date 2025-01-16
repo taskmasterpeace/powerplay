@@ -1,69 +1,82 @@
-import os
 import datetime
 import re
 import platform
 from pathlib import Path
+from typing import Tuple, List, Dict, Optional
 
 class FileHandler:
+    """Handles file operations for audio transcription files.
+    
+    Manages MP3 files and their corresponding transcripts, including file naming
+    conventions and status tracking.
+    """
+    
     def __init__(self):
-        self.processed_files = []
-        self.skipped_files = []
+        self.processed_files: List[str] = []
+        self.skipped_files: List[Tuple[str, str]] = []
         self.date_pattern = re.compile(r'^(\d{6})_.*\.mp3$')
         self.strict_naming = True
         
-    def get_creation_date(self, file_path):
-        """Get file creation date cross-platform compatible"""
+    def get_creation_date(self, file_path: str | Path) -> datetime.datetime:
+        """Gets file creation date in a cross-platform compatible way.
+        
+        Args:
+            file_path: Path to the file.
+            
+        Returns:
+            datetime: The file's creation date.
+        """
         path = Path(file_path)
         
         if platform.system() == 'Windows':
-            # Windows - use creation time
             return datetime.datetime.fromtimestamp(path.stat().st_ctime)
-        else:
-            # Unix-like - try birth time first, fall back to modification time
-            try:
-                return datetime.datetime.fromtimestamp(path.stat().st_birthtime)
-            except AttributeError:
-                # Fallback to modification time if birth time is not available
-                return datetime.datetime.fromtimestamp(path.stat().st_mtime)
-
-    def rename_to_convention(self, original_path):
-        """Rename file to match YYMMDD_ convention using file creation date"""
+            
         try:
-            # Get file creation date
-            creation_date = self.get_creation_date(original_path)
+            return datetime.datetime.fromtimestamp(path.stat().st_birthtime)
+        except AttributeError:
+            return datetime.datetime.fromtimestamp(path.stat().st_mtime)
+
+    def rename_to_convention(self, original_path: str | Path) -> Optional[str]:
+        """Renames file to match YYMMDD_ convention using file creation date.
+        
+        Args:
+            original_path: Path to the file to be renamed.
+            
+        Returns:
+            str: New filename if successful, None if rename failed.
+        """
+        try:
+            path = Path(original_path)
+            creation_date = self.get_creation_date(path)
             date_prefix = creation_date.strftime('%y%m%d')
             
-            # Generate new filename
-            directory = os.path.dirname(original_path)
-            filename = os.path.basename(original_path)
-            
             # Remove any existing date prefix if present
-            clean_filename = re.sub(r'^\d{6}_', '', filename)
-            
+            clean_filename = re.sub(r'^\d{6}_', '', path.name)
             new_filename = f"{date_prefix}_{clean_filename}"
-            new_path = os.path.join(directory, new_filename)
+            new_path = path.parent / new_filename
             
-            print(f"Renaming: {filename} -> {new_filename}")
-            
-            # Check if target file already exists
-            if os.path.exists(new_path):
-                print(f"Warning: Target file {new_filename} already exists")
+            if new_path.exists():
                 return None
                 
-            # Perform the rename
-            os.rename(original_path, new_path)
+            path.rename(new_path)
             return new_filename
             
-        except Exception as e:
-            print(f"Error renaming file {original_path}: {str(e)}")
+        except Exception:
             return None
 
-    def check_transcript_exists(self, file_path, output_type="txt"):
-        """Check if transcript already exists for given file"""
-        directory = os.path.dirname(file_path)
-        base_name = os.path.splitext(os.path.basename(file_path))[0]
-        transcript_path = os.path.join(directory, f"{base_name}_transcript.{output_type}")
-        return os.path.exists(transcript_path)
+    def check_transcript_exists(self, file_path: str | Path, output_type: str = "txt") -> bool:
+        """Checks if transcript already exists for given file.
+        
+        Args:
+            file_path: Path to the audio file.
+            output_type: Expected transcript file extension.
+            
+        Returns:
+            bool: True if transcript exists, False otherwise.
+        """
+        path = Path(file_path)
+        transcript_path = path.parent / f"{path.stem}_transcript.{output_type}"
+        return transcript_path.exists()
 
     def get_mp3_files(self, folder_path):
         """Return list of MP3 files with transcript status"""
