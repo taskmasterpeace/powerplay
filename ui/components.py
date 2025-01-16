@@ -1,6 +1,9 @@
 import tkinter as tk
 from tkinter import ttk, filedialog
 import datetime
+import os
+import platform
+import subprocess
 
 class APIKeyFrame(ttk.LabelFrame):
     def __init__(self, master):
@@ -200,7 +203,32 @@ class ProgressFrame(ttk.LabelFrame):
         result_frame = ttk.Frame(self.scrollable_frame)
         result_frame.pack(fill=tk.X, padx=5, pady=2)
         
-        status_color = "green" if status == "Success" else "red"
+        # Update status colors
+        status_color = {
+            "Success": "green",
+            "Skipped (Transcript Exists)": "blue",
+            "Failed": "red"
+        }.get(status, "black")
         
         ttk.Label(result_frame, text=filename).pack(side=tk.LEFT)
-        ttk.Label(result_frame, text=status, foreground=status_color).pack(side=tk.RIGHT)
+        status_label = ttk.Label(result_frame, text=status, 
+                               foreground=status_color)
+        status_label.pack(side=tk.RIGHT)
+        
+        # Add View button for existing transcripts
+        if status == "Skipped (Transcript Exists)":
+            view_btn = ttk.Button(result_frame, text="View",
+                                command=lambda: self.view_transcript(filename))
+            view_btn.pack(side=tk.RIGHT, padx=5)
+            
+    def view_transcript(self, filename):
+        """Open transcript file in default text editor"""
+        folder_path = self.master.master.app.main_window.file_frame.folder_path.get()
+        base_name = os.path.splitext(filename)[0]
+        transcript_path = os.path.join(folder_path, f"{base_name}_transcript.txt")
+        
+        if os.path.exists(transcript_path):
+            if platform.system() == "Windows":
+                os.startfile(transcript_path)
+            else:
+                subprocess.call(["xdg-open", transcript_path])

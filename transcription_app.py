@@ -80,12 +80,13 @@ class TranscriptionApp:
         print("Starting process_files")
         folder_path = self.main_window.file_frame.folder_path.get()
         print(f"Folder path: {folder_path}")
-        mp3_files = self.file_handler.get_mp3_files(folder_path)
+        mp3_files, transcript_status = self.file_handler.get_mp3_files(folder_path)
         print(f"Found MP3 files: {mp3_files}")
         total_files = len(mp3_files)
         processed_count = 0
         successful_files = 0
         failed_files = 0
+        skipped_files = 0  # Track skipped files
         
         # Reset progress display
         self.main_window.progress_frame.status_var.set(f"Starting transcription of {total_files} files...")
@@ -95,6 +96,14 @@ class TranscriptionApp:
             if self.stop_event.is_set():
                 self.main_window.progress_frame.status_var.set("Transcription stopped by user")
                 break
+            
+            if transcript_status.get(file_name, False):
+                # Skip files with existing transcripts
+                self.main_window.progress_frame.add_file_result(
+                    file_name, "Skipped (Transcript Exists)")
+                skipped_files += 1
+                processed_count += 1
+                continue
                 
             file_path = os.path.join(folder_path, file_name)
             self.main_window.progress_frame.update_progress(file_name, processed_count, total_files)
@@ -140,7 +149,8 @@ class TranscriptionApp:
         # Update final status with detailed results
         final_status = (
             f"Completed: {processed_count}/{total_files} files "
-            f"({successful_files} successful, {failed_files} failed)"
+            f"({successful_files} successful, {failed_files} failed, "
+            f"{skipped_files} skipped)"
         )
         if self.stop_event.is_set():
             final_status += " (Stopped by user)"
