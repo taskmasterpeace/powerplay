@@ -29,6 +29,9 @@ class CalendarView(ttk.Frame):
         self.transcripts = {}
         self.current_folder = None
         
+        # Configure highlight tag for calendar
+        self.highlight_tag = 'highlight'
+        
         # Create main container
         self.main_container = ttk.PanedWindow(self, orient=tk.HORIZONTAL)
         self.main_container.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
@@ -82,8 +85,9 @@ class CalendarView(ttk.Frame):
         self.file_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.file_listbox.configure(yscrollcommand=self.file_scrollbar.set)
         
-        # Bind file selection
+        # Bind file selection and double-click
         self.file_listbox.bind('<<ListboxSelect>>', self.on_file_select)
+        self.file_listbox.bind('<Double-Button-1>', self.on_file_double_click)
         
         # Transcription controls
         self.control_frame = ttk.Frame(self.right_frame)
@@ -175,8 +179,9 @@ class CalendarView(ttk.Frame):
         
     def mark_dates_with_files(self):
         """Highlight dates that have audio files"""
-        # Reset all dates
+        # Reset all dates and tags
         self.calendar.calevent_remove('all')
+        self.calendar.tag_config(self.highlight_tag, background='yellow')
         
         print(f"Audio files by date: {self.audio_files}")  # Debug print
         print(f"Calendar widget: {self.calendar}")  # Debug print
@@ -254,14 +259,42 @@ class CalendarView(ttk.Frame):
         if not selection:
             return
             
-        selected_date = self.calendar.get_date()
-        file_name = self.file_listbox.get(selection[0])
+        item_text = self.file_listbox.get(selection[0])
+        date_str = item_text.split(": ")[0]  # Extract date from "YYYY-MM-DD: filename"
+        file_name = item_text.split(": ")[1]  # Get filename part
         
         # Find full file path
-        file_path = next((fp for fp in self.audio_files[selected_date] 
-                         if os.path.basename(fp) == file_name), None)
-        if file_path:
-            self.display_audio_details(file_path)
+        if date_str in self.audio_files:
+            file_path = next((fp for fp in self.audio_files[date_str] 
+                            if os.path.basename(fp) == file_name), None)
+            if file_path:
+                self.display_audio_details(file_path)
+                
+    def on_file_double_click(self, event):
+        """Handle double-click on file in listbox"""
+        selection = self.file_listbox.curselection()
+        if not selection:
+            return
+            
+        item_text = self.file_listbox.get(selection[0])
+        date_str = item_text.split(": ")[0]  # Extract date from "YYYY-MM-DD: filename"
+        
+        # Jump to date in calendar
+        file_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        
+        # Remove any existing highlight
+        self.calendar.tag_remove(self.highlight_tag, self.calendar.get_date())
+        
+        # Set new date and highlight it
+        self.calendar.selection_set(file_date)
+        self.calendar.see(file_date)
+        self.calendar.tag_add(self.highlight_tag, file_date)
+        
+        # Schedule highlight removal
+        self.after(500, lambda: self.calendar.tag_remove(self.highlight_tag, file_date))
+        
+        # Update file list for selected date
+        self.on_date_select(None)
                 
     def transcribe_selected(self):
         """Transcribe selected file using current service"""
