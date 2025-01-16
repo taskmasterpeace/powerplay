@@ -3,9 +3,11 @@ from tkinter import ttk, filedialog, messagebox
 import os
 from datetime import datetime
 import time
+import threading
 import pyaudio
 from pydub import AudioSegment
 from utils.audio_recorder import AudioRecorder
+from services.assemblyai_realtime import AssemblyAIRealTimeTranscription
 
 class AudioSourceFrame(ttk.LabelFrame):
     def __init__(self, master, app):
@@ -228,43 +230,65 @@ class RecordingFrame(ttk.Frame):
             messagebox.showerror("Error", "Please enter a meeting name")
             return
             
-        self.recorder = AudioRecorder(
-            format=pyaudio.paInt16,
-            channels=1,
-            rate=44100,
-            chunk=1024,
-            mp3_bitrate='128k'
-        )
-        
-        # Initialize metadata
-        self.metadata = {
-            "meeting_name": self.meeting_name.get(),
-            "date": datetime.now().strftime("%Y-%m-%d"),
-            "prompt_template": self.template_var.get(),
-            "custom_prompt": self.prompt_text.get('1.0', tk.END.strip()),
-            "speakers": [],
-            "hotkey_markers": []
-        }
-        
-        self.recording = True
-        self.transcribing = True
-        self.markers = []
-        self.record_btn.configure(text="Stop Recording")
-        self.start_time = time.time()
-        self.update_timer()
-        
-        # Clear displays
-        self.transcript_text.delete('1.0', tk.END)
-        self.response_text.delete('1.0', tk.END)
-        
-        self.recorder.start(callback=self.process_audio_chunk)
+        try:
+            # Initialize AssemblyAI session
+            assemblyai_key = self.app.main_window.api_frame.assemblyai_key.get()
+            if not assemblyai_key:
+                messagebox.showerror("Error", "Please enter AssemblyAI API key")
+                return
+                
+            self.assemblyai_session = AssemblyAIRealTimeTranscription(
+                api_key=assemblyai_key,
+                sample_rate=16000,
+                speaker_detection=True
+            )
+            
+            # Start transcription session
+            self.assemblyai_session.start()
+            
+            # Initialize audio recorder
+            self.recorder = AudioRecorder(
+                format=pyaudio.paInt16,
+                channels=1,
+                rate=44100,
+                chunk=1024,
+                mp3_bitrate='128k'
+            )
+            
+            # Initialize metadata
+            self.metadata = {
+                "meeting_name": self.meeting_name.get(),
+                "date": datetime.now().strftime("%Y-%m-%d"),
+                "prompt_template": self.template_var.get(),
+                "custom_prompt": self.prompt_text.get('1.0', tk.END.strip()),
+                "speakers": [],
+                "hotkey_markers": []
+            }
+            
+            self.recording = True
+            self.transcribing = True
+            self.markers = []
+            self.record_btn.configure(text="Stop Recording")
+            self.start_time = time.time()
+            self.update_timer()
+            
+            # Clear displays
+            self.transcript_text.delete('1.0', tk.END)
+            self.response_text.delete('1.0', tk.END)
+            
+            # Start processing threads
+            self.recorder.start(callback=self.process_audio_chunk)
+            threading.Thread(target=self.process_transcriptions, daemon=True).start()
+            
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to start recording: {str(e)}")
+            self.stop_recording()
         
     def process_audio_chunk(self, audio_chunk):
         """Process audio chunks for live transcription"""
         if self.transcribing:
             try:
-                # This will be implemented with AssemblyAI
-                pass
+                self.assemblyai_session.process_audio_chunk(audio_chunk)
             except Exception as e:
                 print(f"Transcription error: {e}")
         
@@ -301,3 +325,23 @@ class RecordingFrame(ttk.Frame):
             seconds = elapsed % 60
             self.time_label.configure(text=f"{minutes:02d}:{seconds:02d}")
             self.after(1000, self.update_timer)
+            
+    def process_transcriptions(self):
+        """Process incoming transcriptions"""
+        while self.recording:
+            try:
+                packet = self.assemblyai_session.get_next_transcription()
+                if packet:
+                    # Format transcript with timestamp and speaker
+                    formatted_transcript = self.format_transcript(packet)
+                    
+                    # Update UI (thread-safe)
+                    self.master.after(0, self.update_transcript_display, formatted_transcript)
+                    
+                    # Update metadata
+                    if packet.get('speaker') and packet['speaker'] not in self.metadata['speakers']:
+                        self.metadata['speakers'].append(packet['speaker'])
+                        
+            except Exception as e:
+                print(f"Transcription processing error: {e}")
+                time.sleep(0.1)
