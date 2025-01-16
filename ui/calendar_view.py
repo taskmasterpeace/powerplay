@@ -120,20 +120,21 @@ class CalendarView(ttk.Frame):
         
         for file_name in mp3_files:
             file_path = os.path.join(folder_path, file_name)
-            # Extract date from filename using YYMMDD convention
+            # Try to get date from filename first
             date_match = re.match(r'^(\d{2})(\d{2})(\d{2})_', os.path.basename(file_path))
             if date_match:
                 year, month, day = date_match.groups()
-                # Convert to full date string (assuming 20xx for year)
                 date_str = f"20{year}-{month}-{day}"
-                print(f"Extracted date: {date_str} from {file_name}")  # Debug print
-                
-                # Store in audio_files dictionary
-                if date_str not in self.audio_files:
-                    self.audio_files[date_str] = []
-                self.audio_files[date_str].append(file_path)
             else:
-                print(f"No date match for file: {file_name}")  # Debug print
+                # Fallback to creation date
+                creation_date = self.app.file_handler.get_creation_date(file_path)
+                date_str = creation_date.strftime('%Y-%m-%d')
+                print(f"Using creation date for {file_name}: {date_str}")  # Debug print
+            
+            # Store in audio_files dictionary
+            if date_str not in self.audio_files:
+                self.audio_files[date_str] = []
+            self.audio_files[date_str].append(file_path)
         
         # Update calendar display
         self.mark_dates_with_files()
