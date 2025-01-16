@@ -111,8 +111,12 @@ class CalendarView(ttk.Frame):
         self.audio_files.clear()
         self.file_listbox.delete(0, tk.END)
         
+        print(f"Loading files from: {folder_path}")  # Debug print
+        
         # Use FileHandler to get files
         mp3_files, transcript_status = self.app.file_handler.get_mp3_files(folder_path)
+        
+        print(f"Found MP3 files: {mp3_files}")  # Debug print
         
         for file_name in mp3_files:
             file_path = os.path.join(folder_path, file_name)
@@ -122,11 +126,14 @@ class CalendarView(ttk.Frame):
                 year, month, day = date_match.groups()
                 # Convert to full date string (assuming 20xx for year)
                 date_str = f"20{year}-{month}-{day}"
+                print(f"Extracted date: {date_str} from {file_name}")  # Debug print
                 
                 # Store in audio_files dictionary
                 if date_str not in self.audio_files:
                     self.audio_files[date_str] = []
                 self.audio_files[date_str].append(file_path)
+            else:
+                print(f"No date match for file: {file_name}")  # Debug print
         
         # Update calendar display
         self.mark_dates_with_files()
@@ -141,23 +148,33 @@ class CalendarView(ttk.Frame):
         # Reset all dates
         self.calendar.calevent_remove('all')
         
+        print(f"Audio files by date: {self.audio_files}")  # Debug print
+        
         # Mark dates with files
         for date_str in self.audio_files.keys():
-            date = datetime.strptime(date_str, '%Y-%m-%d')
-            
-            # Check if any files on this date have transcripts
-            has_transcript = any(
-                self.app.file_handler.check_transcript_exists(file_path)
-                for file_path in self.audio_files[date_str]
-            )
-            
-            # Create event with appropriate tag
-            tag = 'has_transcript' if has_transcript else 'no_transcript'
-            self.calendar.calevent_create(date, tag, 'Files Available')
+            try:
+                # Parse the date string
+                date = datetime.strptime(date_str, '%Y-%m-%d').date()
+                print(f"Marking date: {date}")  # Debug print
+                
+                # Check if any files on this date have transcripts
+                has_transcript = any(
+                    self.app.file_handler.check_transcript_exists(file_path)
+                    for file_path in self.audio_files[date_str]
+                )
+                
+                # Create event with appropriate tag
+                tag = 'has_transcript' if has_transcript else 'no_transcript'
+                self.calendar.calevent_create(date, tag, 'Files Available')
+                print(f"Created event for {date} with tag {tag}")  # Debug print
+                
+            except ValueError as e:
+                print(f"Error processing date {date_str}: {e}")
+                continue
         
-        # Configure tags
-        self.calendar.tag_config('has_transcript', background='lightgreen')
-        self.calendar.tag_config('no_transcript', background='lightpink')
+        # Configure tags with more visible colors
+        self.calendar.tag_config('has_transcript', background='#90EE90')  # Light green
+        self.calendar.tag_config('no_transcript', background='#FFB6C6')  # Light pink
                 
     def get_transcription_status(self, file_path):
         """Get the processing status of a file"""
