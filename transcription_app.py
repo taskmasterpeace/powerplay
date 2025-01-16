@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 import os
 import threading
+import datetime
 from services.openai_service import OpenAITranscriptionService
 from services.assemblyai_service import AssemblyAITranscriptionService
 from ui.main_window import MainWindow
@@ -31,6 +32,7 @@ class TranscriptionApp:
         print("Starting transcription...")
         # Get API keys
         print("Getting API keys...")
+        self.start_time = datetime.datetime.now()
         openai_key = self.main_window.api_frame.openai_key.get()
         assemblyai_key = self.main_window.api_frame.assemblyai_key.get()
         
@@ -82,6 +84,8 @@ class TranscriptionApp:
         print(f"Found MP3 files: {mp3_files}")
         total_files = len(mp3_files)
         processed_count = 0
+        successful_files = 0
+        failed_files = 0
         
         # Reset progress display
         self.main_window.progress_frame.status_var.set(f"Starting transcription of {total_files} files...")
@@ -123,19 +127,26 @@ class TranscriptionApp:
                 
                 self.file_handler.processed_files.append(file_name)
                 self.main_window.progress_frame.add_file_result(file_name, "Success")
+                successful_files += 1
                 
             except Exception as e:
                 self.file_handler.skipped_files.append((file_name, str(e)))
                 self.main_window.progress_frame.add_file_result(file_name, f"Failed: {str(e)}")
+                failed_files += 1
                 continue
             
             processed_count += 1
             
-        # Update final status
-        final_status = f"Completed: {processed_count}/{total_files} files processed"
+        # Update final status with detailed results
+        final_status = (
+            f"Completed: {processed_count}/{total_files} files "
+            f"({successful_files} successful, {failed_files} failed)"
+        )
         if self.stop_event.is_set():
             final_status += " (Stopped by user)"
+            
         self.main_window.progress_frame.status_var.set(final_status)
+        self.main_window.progress_frame.mark_completion(self.start_time)
             
         # Re-enable start button, disable stop button
         self.main_window.file_frame.start_button.config(state=tk.NORMAL)

@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import ttk, filedialog
+import datetime
 
 class APIKeyFrame(ttk.LabelFrame):
     def __init__(self, master):
@@ -111,14 +112,25 @@ class ProgressFrame(ttk.LabelFrame):
     def __init__(self, master):
         super().__init__(master, text="Progress")
         
+        # Add completion time label
+        self.completion_var = tk.StringVar()
+        self.completion_label = ttk.Label(self, textvariable=self.completion_var)
+        self.completion_label.pack(fill=tk.X, padx=5, pady=2)
+        
         # Status label
         self.status_var = tk.StringVar(value="Ready")
         self.status_label = ttk.Label(self, textvariable=self.status_var)
-        self.status_label.pack(fill=tk.X, padx=5, pady=5)
+        self.status_label.pack(fill=tk.X, padx=5, pady=2)
         
         # Overall progress
-        self.overall_progress = ttk.Progressbar(self, mode='determinate')
-        self.overall_progress.pack(fill=tk.X, padx=5, pady=5)
+        self.progress_frame = ttk.Frame(self)
+        self.progress_frame.pack(fill=tk.X, padx=5, pady=2)
+        
+        self.progress_label = ttk.Label(self.progress_frame, text="0%")
+        self.progress_label.pack(side=tk.RIGHT, padx=5)
+        
+        self.overall_progress = ttk.Progressbar(self.progress_frame, mode='determinate')
+        self.overall_progress.pack(side=tk.LEFT, fill=tk.X, expand=True)
         
         # Current file label
         self.current_file_var = tk.StringVar()
@@ -167,6 +179,22 @@ class ProgressFrame(ttk.LabelFrame):
         self.current_file_var.set(f"Current file: {current_file}")
         progress = (processed_count / total_count * 100) if total_count > 0 else 0
         self.overall_progress['value'] = progress
+        self.progress_label.config(text=f"{progress:.1f}%")
+        
+    def mark_completion(self, start_time):
+        end_time = datetime.datetime.now()
+        duration = end_time - start_time
+        minutes = duration.seconds // 60
+        seconds = duration.seconds % 60
+        
+        self.completion_var.set(
+            f"Completed at {end_time.strftime('%H:%M:%S')} "
+            f"(Duration: {minutes}m {seconds}s)"
+        )
+        
+        # Ensure progress bar shows 100%
+        self.overall_progress['value'] = 100
+        self.progress_label.config(text="100%")
         
     def add_file_result(self, filename, status):
         result_frame = ttk.Frame(self.scrollable_frame)
