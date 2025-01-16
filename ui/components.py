@@ -179,12 +179,14 @@ class ProgressFrame(ttk.LabelFrame):
         self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
         
     def update_progress(self, current_file, processed_count, total_count):
-        # Get folder path directly from file frame
-        for widget in self.master.winfo_children():
-            if isinstance(widget, FileSelectionFrame):
-                self.folder_path = widget.folder_path.get()
-                break
-                
+        # Get and store folder path from FileSelectionFrame if not already set
+        if not self.folder_path:
+            for widget in self.master.winfo_children():
+                if isinstance(widget, FileSelectionFrame):
+                    self.folder_path = widget.folder_path.get()
+                    print(f"Setting folder path: {self.folder_path}")  # Debug print
+                    break
+        
         self.status_var.set(f"Processing: {processed_count}/{total_count} files")
         self.current_file_var.set(f"Current file: {current_file}")
         progress = (processed_count / total_count * 100) if total_count > 0 else 0
@@ -231,11 +233,20 @@ class ProgressFrame(ttk.LabelFrame):
     def view_transcript(self, filename):
         """Open transcript file in default text editor"""
         if not self.folder_path:
-            print("Folder path not set")
-            return
+            # Try to get folder path from FileSelectionFrame
+            for widget in self.master.winfo_children():
+                if isinstance(widget, FileSelectionFrame):
+                    self.folder_path = widget.folder_path.get()
+                    print(f"Retrieved folder path: {self.folder_path}")  # Debug print
+                    break
             
+            if not self.folder_path:
+                print("Could not find folder path")
+                return
+                
         base_name = os.path.splitext(filename)[0]
         transcript_path = os.path.join(self.folder_path, f"{base_name}_transcript.txt")
+        print(f"Attempting to open: {transcript_path}")  # Debug print
         
         if os.path.exists(transcript_path):
             try:
