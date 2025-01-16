@@ -8,7 +8,7 @@ class FileHandler:
     """Handles file operations for audio transcription files.
     
     Manages MP3 files and their corresponding transcripts, including file naming
-    conventions and status tracking.
+    conventions and status tracking across different source types (batch, recordings, imports).
     """
     
     def __init__(self):
@@ -16,6 +16,27 @@ class FileHandler:
         self.skipped_files: List[Tuple[str, str]] = []
         self.date_pattern = re.compile(r'^(\d{6})_.*\.mp3$')
         self.strict_naming = True
+        
+        # Setup folder structure
+        self.base_dir = "audio_files"
+        self.folders = {
+            "recordings": os.path.join(self.base_dir, "recordings"),
+            "imports": os.path.join(self.base_dir, "imports"),
+            "batch": os.path.join(self.base_dir, "batch")
+        }
+        self.setup_folders()
+        
+    def setup_folders(self):
+        """Create necessary folder structure"""
+        for folder in self.folders.values():
+            os.makedirs(folder, exist_ok=True)
+            
+    def get_dated_folder(self, base_folder: str) -> str:
+        """Get or create a dated folder within the specified base folder"""
+        date_str = datetime.datetime.now().strftime('%y%m%d')
+        folder_path = os.path.join(self.folders[base_folder], date_str)
+        os.makedirs(folder_path, exist_ok=True)
+        return folder_path
         
     def get_creation_date(self, file_path: str | Path) -> datetime.datetime:
         """Gets file creation date in a cross-platform compatible way.
@@ -141,15 +162,36 @@ class FileHandler:
             return datetime.datetime.strptime(date_str, '%y%m%d')
         return None
     
-    def generate_output_filename(self, input_file: str | Path, output_type: str) -> str:
+    def generate_output_filename(self, input_file: str | Path, output_type: str, source_type: str = "batch") -> str:
         """Generate output filename maintaining convention.
         
         Args:
             input_file: Input audio filename.
             output_type: Desired output file extension.
+            source_type: Type of source ("recordings", "imports", or "batch").
             
         Returns:
             str: Generated output filename with transcript suffix.
         """
         path = Path(input_file)
-        return f"{path.stem}_transcript.{output_type}"
+        dated_folder = self.get_dated_folder(source_type)
+        return os.path.join(dated_folder, f"{path.stem}_transcript.{output_type}")
+        
+    def save_recording(self, audio_data: bytes, filename: str) -> str:
+        """Save a recording to the recordings folder.
+        
+        Args:
+            audio_data: Raw audio data.
+            filename: Desired filename.
+            
+        Returns:
+            str: Full path to saved recording.
+        """
+        dated_folder = self.get_dated_folder("recordings")
+        date_str = datetime.datetime.now().strftime('%y%m%d_%H%M%S')
+        output_path = os.path.join(dated_folder, f"{date_str}_{filename}.mp3")
+        
+        with open(output_path, 'wb') as f:
+            f.write(audio_data)
+            
+        return output_path
