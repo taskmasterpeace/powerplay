@@ -179,13 +179,12 @@ class ProgressFrame(ttk.LabelFrame):
         self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
         
     def update_progress(self, current_file, processed_count, total_count):
-        # Update folder path from current file's directory
-        if current_file and not self.folder_path:
-            self.folder_path = os.path.dirname(os.path.join(
-                self.master.master.app.main_window.file_frame.folder_path.get(),
-                current_file
-            ))
-            
+        # Get folder path directly from file frame
+        for widget in self.master.winfo_children():
+            if isinstance(widget, FileSelectionFrame):
+                self.folder_path = widget.folder_path.get()
+                break
+                
         self.status_var.set(f"Processing: {processed_count}/{total_count} files")
         self.current_file_var.set(f"Current file: {current_file}")
         progress = (processed_count / total_count * 100) if total_count > 0 else 0
