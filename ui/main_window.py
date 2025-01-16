@@ -3,9 +3,9 @@ from tkinter import ttk
 from .components import (
     APIKeyFrame,
     ModelSelectionFrame,
-    FileSelectionFrame,
     ProgressFrame
 )
+from .audio_sources import AudioSourceFrame
 
 class MainWindow:
     def __init__(self, master, app):
@@ -32,9 +32,9 @@ class MainWindow:
         self.model_frame = ModelSelectionFrame(self.batch_frame)
         self.model_frame.pack(fill=tk.X, padx=10, pady=5)
         
-        # File Selection
-        self.file_frame = FileSelectionFrame(self.batch_frame, self.app)
-        self.file_frame.pack(fill=tk.X, padx=10, pady=5)
+        # Audio Source Selection
+        self.audio_source_frame = AudioSourceFrame(self.batch_frame, self.app)
+        self.audio_source_frame.pack(fill=tk.X, padx=10, pady=5)
         
         # Progress Display
         self.progress_frame = ProgressFrame(self.batch_frame)

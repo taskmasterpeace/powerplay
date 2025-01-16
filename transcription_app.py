@@ -40,12 +40,24 @@ class TranscriptionApp:
         service = self.main_window.model_frame.service_var.get()
         print(f"Selected service: {service}")
         
-        # Get folder path
-        folder_path = self.main_window.file_frame.folder_path.get()
+        # Get active tab from audio sources
+        current_tab = self.main_window.audio_source_frame.source_notebook.select()
+        tab_name = self.main_window.audio_source_frame.source_notebook.tab(current_tab, "text")
         
-        if not folder_path:
-            print("No folder selected")
-            messagebox.showerror("Error", "Please select a folder first.")
+        if tab_name == "Folder":
+            folder_path = self.main_window.audio_source_frame.folder_frame.folder_path.get()
+            if not folder_path:
+                messagebox.showerror("Error", "Please select a folder first.")
+                return
+        elif tab_name == "Single File":
+            # Handle single file transcription
+            file_path = self.main_window.audio_source_frame.file_frame.current_file
+            if not file_path:
+                messagebox.showerror("Error", "Please select a file first.")
+                return
+            folder_path = os.path.dirname(file_path)
+        else:
+            messagebox.showerror("Error", "Please select a valid audio source.")
             return
             
         # Setup appropriate service
@@ -67,8 +79,8 @@ class TranscriptionApp:
             return
             
         # Disable start button, enable stop button
-        self.main_window.file_frame.start_button.config(state=tk.DISABLED)
-        self.main_window.file_frame.stop_button.config(state=tk.NORMAL)
+        self.main_window.audio_source_frame.folder_frame.start_button.config(state=tk.DISABLED)
+        self.main_window.audio_source_frame.folder_frame.stop_button.config(state=tk.NORMAL)
         
         # Clear stop event
         self.stop_event.clear()
@@ -161,8 +173,8 @@ class TranscriptionApp:
         self.main_window.progress_frame.mark_completion(self.start_time)
             
         # Re-enable start button, disable stop button
-        self.main_window.file_frame.start_button.config(state=tk.NORMAL)
-        self.main_window.file_frame.stop_button.config(state=tk.DISABLED)
+        self.main_window.audio_source_frame.folder_frame.start_button.config(state=tk.NORMAL)
+        self.main_window.audio_source_frame.folder_frame.stop_button.config(state=tk.DISABLED)
         
     def stop_transcription(self):
         self.stop_event.set()
