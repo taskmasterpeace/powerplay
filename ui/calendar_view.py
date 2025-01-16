@@ -52,7 +52,8 @@ class CalendarView(ttk.Frame):
         self.calendar = Calendar(self.left_frame, 
                                selectmode='day',
                                date_pattern='y-mm-dd',
-                               showweeknumbers=False)
+                               showweeknumbers=False,
+                               firstweekday='sunday')
         self.calendar.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         self.calendar.bind('<<CalendarSelected>>', self.on_date_select)
         
@@ -125,6 +126,7 @@ class CalendarView(ttk.Frame):
             if date_match:
                 year, month, day = date_match.groups()
                 date_str = f"20{year}-{month}-{day}"
+                print(f"Extracted date from filename: {date_str}")  # Debug print
             else:
                 # Fallback to creation date
                 creation_date = self.app.file_handler.get_creation_date(file_path)
@@ -135,6 +137,9 @@ class CalendarView(ttk.Frame):
             if date_str not in self.audio_files:
                 self.audio_files[date_str] = []
             self.audio_files[date_str].append(file_path)
+            print(f"Added file to date {date_str}: {file_path}")  # Debug print
+        
+        print(f"Final audio_files dictionary: {self.audio_files}")  # Debug print
         
         # Update calendar display
         self.mark_dates_with_files()
@@ -150,6 +155,7 @@ class CalendarView(ttk.Frame):
         self.calendar.calevent_remove('all')
         
         print(f"Audio files by date: {self.audio_files}")  # Debug print
+        print(f"Calendar widget: {self.calendar}")  # Debug print
         
         # Mark dates with files
         for date_str in self.audio_files.keys():
@@ -166,7 +172,13 @@ class CalendarView(ttk.Frame):
                 
                 # Create event with appropriate tag
                 tag = 'has_transcript' if has_transcript else 'no_transcript'
+                print(f"Setting calendar date: {date} with tag {tag}")  # Debug print
+                
+                # Force calendar to select and show the date
+                self.calendar.selection_set(date)
+                self.calendar.see(date)
                 self.calendar.calevent_create(date, tag, 'Files Available')
+                
                 print(f"Created event for {date} with tag {tag}")  # Debug print
                 
             except ValueError as e:
@@ -176,6 +188,9 @@ class CalendarView(ttk.Frame):
         # Configure tags with more visible colors
         self.calendar.tag_config('has_transcript', background='#90EE90')  # Light green
         self.calendar.tag_config('no_transcript', background='#FFB6C6')  # Light pink
+        
+        # Force calendar update
+        self.calendar.update()
                 
     def get_transcription_status(self, file_path):
         """Get the processing status of a file"""
