@@ -64,15 +64,27 @@ class CalendarView(ttk.Frame):
         self.right_frame = ttk.Frame(self.main_container)
         self.main_container.add(self.right_frame, weight=2)
         
-        # File list frame
-        self.files_frame = ttk.LabelFrame(self.right_frame, text="Audio Files")
+        # Create notebook for file views
+        self.file_notebook = ttk.Notebook(self.right_frame)
+        self.file_notebook.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
+        # Date view tab
+        self.date_frame = ttk.Frame(self.file_notebook)
+        self.file_notebook.add(self.date_frame, text="By Date")
+        
+        # All files tab
+        self.all_files_frame = ttk.Frame(self.file_notebook)
+        self.file_notebook.add(self.all_files_frame, text="All Files")
+        
+        # File list frame for date view
+        self.files_frame = ttk.LabelFrame(self.date_frame, text="Audio Files")
         self.files_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         
         # Add files label
         self.files_label = ttk.Label(self.files_frame, text="Files for selected date:")
         self.files_label.pack(fill=tk.X, padx=5, pady=5)
         
-        # File listbox with scrollbar
+        # File listbox with scrollbar for date view
         self.file_list_frame = ttk.Frame(self.files_frame)
         self.file_list_frame.pack(fill=tk.BOTH, expand=True)
         
@@ -84,6 +96,26 @@ class CalendarView(ttk.Frame):
                                           command=self.file_listbox.yview)
         self.file_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.file_listbox.configure(yscrollcommand=self.file_scrollbar.set)
+        
+        # All files list
+        self.all_files_label = ttk.Label(self.all_files_frame, text="All Audio Files:")
+        self.all_files_label.pack(fill=tk.X, padx=5, pady=5)
+        
+        self.all_files_frame_inner = ttk.Frame(self.all_files_frame)
+        self.all_files_frame_inner.pack(fill=tk.BOTH, expand=True)
+        
+        self.all_files_listbox = tk.Listbox(self.all_files_frame_inner)
+        self.all_files_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        self.all_files_scrollbar = ttk.Scrollbar(self.all_files_frame_inner,
+                                                orient="vertical",
+                                                command=self.all_files_listbox.yview)
+        self.all_files_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.all_files_listbox.configure(yscrollcommand=self.all_files_scrollbar.set)
+        
+        # Bind events for all files list
+        self.all_files_listbox.bind('<<ListboxSelect>>', self.on_all_files_select)
+        self.all_files_listbox.bind('<Double-Button-1>', self.on_all_files_double_click)
         
         # Bind file selection and double-click
         self.file_listbox.bind('<<ListboxSelect>>', self.on_file_select)
@@ -117,6 +149,7 @@ class CalendarView(ttk.Frame):
         """Load all audio files from selected folder"""
         self.audio_files.clear()
         self.file_listbox.delete(0, tk.END)
+        self.all_files_listbox.delete(0, tk.END)
         
         print(f"Loading files from: {folder_path}")  # Debug print
         
@@ -155,14 +188,14 @@ class CalendarView(ttk.Frame):
             self.audio_files[date_str].append(file_path)
             print(f"Added file to date {date_str}: {file_path}")  # Debug print
             
-            # Add to listbox immediately with date prefix
+            # Add to all files listbox with date prefix
             display_name = f"{date_str}: {os.path.basename(file_path)}"
-            self.file_listbox.insert(tk.END, display_name)
+            self.all_files_listbox.insert(tk.END, display_name)
             
             # Color code based on transcript status
             has_transcript = self.app.file_handler.check_transcript_exists(file_path)
             color = 'green' if has_transcript else 'red'
-            self.file_listbox.itemconfig(tk.END, {'fg': color})
+            self.all_files_listbox.itemconfig(tk.END, {'fg': color})
         
         print(f"Final audio_files dictionary: {self.audio_files}")  # Debug print
         
@@ -342,6 +375,45 @@ class CalendarView(ttk.Frame):
             except Exception as e:
                 messagebox.showerror("Error", f"Transcription failed: {str(e)}")
                 
+    def on_all_files_select(self, event):
+        """Handle selection in all files listbox"""
+        selection = self.all_files_listbox.curselection()
+        if not selection:
+            return
+            
+        item_text = self.all_files_listbox.get(selection[0])
+        date_str = item_text.split(": ")[0]  # Extract date from "YYYY-MM-DD: filename"
+        file_name = item_text.split(": ")[1]  # Get filename part
+        
+        # Find full file path
+        if date_str in self.audio_files:
+            file_path = next((fp for fp in self.audio_files[date_str] 
+                            if os.path.basename(fp) == file_name), None)
+            if file_path:
+                # Update UI to show file is selected
+                has_transcript = self.app.file_handler.check_transcript_exists(file_path)
+                self.view_transcript_btn.configure(state='normal' if has_transcript else 'disabled')
+
+    def on_all_files_double_click(self, event):
+        """Handle double-click in all files listbox"""
+        selection = self.all_files_listbox.curselection()
+        if not selection:
+            return
+            
+        item_text = self.all_files_listbox.get(selection[0])
+        date_str = item_text.split(": ")[0]  # Extract date from "YYYY-MM-DD: filename"
+        
+        # Switch to date view tab
+        self.file_notebook.select(0)
+        
+        # Jump to date in calendar
+        file_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        self.calendar.selection_set(file_date)
+        self.calendar.see(file_date)
+        
+        # Update file list for selected date
+        self.on_date_select(None)
+        
     def view_transcript(self):
         """View transcript for selected file and switch to calendar view"""
         selection = self.file_listbox.curselection()
