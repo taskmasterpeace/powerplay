@@ -98,6 +98,7 @@ class FileHandler:
         try:
             # First pass - check existing files and transcripts
             for f in folder.glob('*.mp3'):
+                print(f"Found MP3 file: {f.name}")  # Debug print
                 if not f.name.lower().endswith('.mp3'):
                     print(f"Skipping non-MP3 file: {f.name}")
                     continue
@@ -105,12 +106,13 @@ class FileHandler:
                 has_transcript = self.check_transcript_exists(f)
                 transcript_status[f.name] = has_transcript
                 
+                # Always add to mp3_files list, whether it matches convention or not
+                mp3_files.append(f.name)
+                
                 if not self.date_pattern.match(f.name):
                     print(f"File {f.name} doesn't match YYMMDD_ convention")
                     print(f"Original creation date: {self.get_creation_date(f)}")
                     renamed_files.append(f)
-                else:
-                    mp3_files.append(f.name)
             
             # Second pass - perform renames
             for file_path in renamed_files:
