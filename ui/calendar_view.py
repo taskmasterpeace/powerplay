@@ -119,6 +119,8 @@ class CalendarView(ttk.Frame):
         
         print(f"Found MP3 files: {mp3_files}")  # Debug print
         
+        earliest_date = None
+        
         for file_name in mp3_files:
             file_path = os.path.join(folder_path, file_name)
             # Try to get date from filename first
@@ -126,28 +128,44 @@ class CalendarView(ttk.Frame):
             if date_match:
                 year, month, day = date_match.groups()
                 date_str = f"20{year}-{month}-{day}"
+                file_date = datetime.strptime(date_str, '%Y-%m-%d').date()
                 print(f"Extracted date from filename: {date_str}")  # Debug print
             else:
                 # Fallback to creation date
                 creation_date = self.app.file_handler.get_creation_date(file_path)
                 date_str = creation_date.strftime('%Y-%m-%d')
+                file_date = creation_date.date()
                 print(f"Using creation date for {file_name}: {date_str}")  # Debug print
+            
+            # Track earliest date
+            if earliest_date is None or file_date < earliest_date:
+                earliest_date = file_date
             
             # Store in audio_files dictionary
             if date_str not in self.audio_files:
                 self.audio_files[date_str] = []
             self.audio_files[date_str].append(file_path)
             print(f"Added file to date {date_str}: {file_path}")  # Debug print
+            
+            # Add to listbox immediately
+            self.file_listbox.insert(tk.END, f"{date_str}: {os.path.basename(file_path)}")
+            # Color code based on transcript status
+            has_transcript = self.app.file_handler.check_transcript_exists(file_path)
+            color = 'green' if has_transcript else 'red'
+            self.file_listbox.itemconfig(tk.END, {'fg': color})
         
         print(f"Final audio_files dictionary: {self.audio_files}")  # Debug print
         
         # Update calendar display
         self.mark_dates_with_files()
         
-        # Select current date and show files
-        current_date = datetime.now().strftime('%Y-%m-%d')
-        self.calendar.selection_set(current_date)
-        self.on_date_select(None)  # Update file list for current date
+        # Select earliest date if available, otherwise current date
+        if earliest_date:
+            self.calendar.selection_set(earliest_date)
+            self.calendar.see(earliest_date)
+        else:
+            current_date = datetime.now().strftime('%Y-%m-%d')
+            self.calendar.selection_set(current_date)
         
     def mark_dates_with_files(self):
         """Highlight dates that have audio files"""
@@ -208,22 +226,14 @@ class CalendarView(ttk.Frame):
         selected_date = self.calendar.get_date()
         self.files_label.config(text=f"Files for {selected_date}:")
         
-        # Clear listbox
-        self.file_listbox.delete(0, tk.END)
-        
-        # Add files for selected date
-        if selected_date in self.audio_files:
-            for file_path in self.audio_files[selected_date]:
-                file_name = os.path.basename(file_path)
-                status = self.get_transcription_status(file_path)
-                self.file_listbox.insert(tk.END, file_name)
-                # Color code based on status
-                color = {
-                    'not_transcribed': 'red',
-                    'transcribed': 'orange',
-                    'chapterized': 'green'
-                }.get(status, 'black')
-                self.file_listbox.itemconfig(tk.END, {'fg': color})
+        # Highlight matching files in listbox
+        for i in range(self.file_listbox.size()):
+            item_text = self.file_listbox.get(i)
+            if item_text.startswith(selected_date):
+                self.file_listbox.selection_set(i)
+                self.file_listbox.see(i)  # Ensure visible
+            else:
+                self.file_listbox.selection_clear(i)
                 
     def on_file_select(self, event):
         """Handle file selection in listbox"""
