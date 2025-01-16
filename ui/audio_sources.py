@@ -100,8 +100,34 @@ class RecordingFrame(ttk.Frame):
         super().__init__(master)
         self.app = app
         self.recording = False
+        self.transcribing = False
+        self.current_transcript = ""
+        self.markers = []  # Store markers with timestamps
         
-        # Controls
+        # Meeting Configuration Frame
+        self.config_frame = ttk.LabelFrame(self, text="Meeting Configuration")
+        self.config_frame.pack(fill=tk.X, padx=5, pady=5)
+        
+        # Meeting Name
+        ttk.Label(self.config_frame, text="Meeting Name:").pack(pady=2)
+        self.meeting_name = ttk.Entry(self.config_frame)
+        self.meeting_name.pack(fill=tk.X, padx=5, pady=2)
+        
+        # Template Selection
+        ttk.Label(self.config_frame, text="Template:").pack(pady=2)
+        self.template_var = tk.StringVar()
+        self.template_combo = ttk.Combobox(self.config_frame, 
+            textvariable=self.template_var,
+            values=["Job Interview", "Technical Meeting", "Project Review", "Custom"])
+        self.template_combo.pack(fill=tk.X, padx=5, pady=2)
+        self.template_combo.bind('<<ComboboxSelected>>', self.on_template_change)
+        
+        # Custom Prompt
+        ttk.Label(self.config_frame, text="Custom Prompt:").pack(pady=2)
+        self.prompt_text = tk.Text(self.config_frame, height=3)
+        self.prompt_text.pack(fill=tk.X, padx=5, pady=2)
+        
+        # Controls Frame
         self.controls_frame = ttk.Frame(self)
         self.controls_frame.pack(fill=tk.X, padx=5, pady=5)
         
@@ -115,13 +141,82 @@ class RecordingFrame(ttk.Frame):
         self.time_label = ttk.Label(self.controls_frame, text="00:00")
         self.time_label.pack(side=tk.LEFT, padx=5)
         
-        # Live preview
-        self.preview_frame = ttk.LabelFrame(self, text="Live Preview")
-        self.preview_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        # Display Options
+        self.display_frame = ttk.Frame(self.controls_frame)
+        self.display_frame.pack(side=tk.RIGHT, padx=5)
         
-        self.preview_text = tk.Text(self.preview_frame, height=10)
-        self.preview_text.pack(fill=tk.BOTH, expand=True)
+        self.show_timestamps = tk.BooleanVar(value=True)
+        ttk.Checkbutton(self.display_frame, text="Show Timestamps", 
+                       variable=self.show_timestamps,
+                       command=self.refresh_display).pack(side=tk.RIGHT)
         
+        # Split View Frame
+        self.split_frame = ttk.PanedWindow(self, orient=tk.HORIZONTAL)
+        self.split_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
+        # Transcript Frame
+        self.transcript_frame = ttk.LabelFrame(self.split_frame, text="Live Transcription")
+        self.split_frame.add(self.transcript_frame, weight=1)
+        
+        self.transcript_text = tk.Text(self.transcript_frame, wrap=tk.WORD)
+        self.transcript_text.pack(fill=tk.BOTH, expand=True)
+        self.transcript_scroll = ttk.Scrollbar(self.transcript_frame, 
+                                             command=self.transcript_text.yview)
+        self.transcript_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+        self.transcript_text.configure(yscrollcommand=self.transcript_scroll.set)
+        
+        # Future LLM Response Frame (placeholder)
+        self.response_frame = ttk.LabelFrame(self.split_frame, text="AI Responses")
+        self.split_frame.add(self.response_frame, weight=1)
+        
+        self.response_text = tk.Text(self.response_frame, wrap=tk.WORD)
+        self.response_text.pack(fill=tk.BOTH, expand=True)
+        self.response_scroll = ttk.Scrollbar(self.response_frame, 
+                                           command=self.response_text.yview)
+        self.response_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+        self.response_text.configure(yscrollcommand=self.response_scroll.set)
+        
+        # Bind function keys
+        for i in range(1, 13):  # F1 through F12
+            self.master.bind(f'<F{i}>', self.add_marker)
+        
+    def add_marker(self, event):
+        """Add a marker when function key is pressed"""
+        if self.recording:
+            timestamp = time.time() - self.start_time
+            marker = {
+                'timestamp': timestamp,
+                'key': event.keysym,
+                'position': self.transcript_text.index(tk.INSERT)
+            }
+            self.markers.append(marker)
+            
+            # Insert marker emoji
+            self.transcript_text.insert(tk.INSERT, " 🚩 ")
+            self.transcript_text.see(tk.INSERT)
+            
+    def on_template_change(self, event):
+        """Handle template selection"""
+        template = self.template_var.get()
+        if template == "Job Interview":
+            self.prompt_text.delete('1.0', tk.END)
+            self.prompt_text.insert('1.0', 
+                "Help me during this interview by analyzing responses and suggesting improvements.")
+        elif template == "Technical Meeting":
+            self.prompt_text.delete('1.0', tk.END)
+            self.prompt_text.insert('1.0',
+                "Track technical terms and concepts discussed in the meeting.")
+        elif template == "Project Review":
+            self.prompt_text.delete('1.0', tk.END)
+            self.prompt_text.insert('1.0',
+                "Track action items, decisions, and key discussion points.")
+                
+    def refresh_display(self):
+        """Refresh the transcript display with current settings"""
+        if hasattr(self, 'current_transcript'):
+            self.transcript_text.delete('1.0', tk.END)
+            self.transcript_text.insert('1.0', self.current_transcript)
+            
     def toggle_recording(self):
         if not self.recording:
             self.start_recording()
@@ -129,6 +224,10 @@ class RecordingFrame(ttk.Frame):
             self.stop_recording()
             
     def start_recording(self):
+        if not self.meeting_name.get():
+            messagebox.showerror("Error", "Please enter a meeting name")
+            return
+            
         self.recorder = AudioRecorder(
             format=pyaudio.paInt16,
             channels=1,
@@ -136,20 +235,63 @@ class RecordingFrame(ttk.Frame):
             chunk=1024,
             mp3_bitrate='128k'
         )
+        
+        # Initialize metadata
+        self.metadata = {
+            "meeting_name": self.meeting_name.get(),
+            "date": datetime.now().strftime("%Y-%m-%d"),
+            "prompt_template": self.template_var.get(),
+            "custom_prompt": self.prompt_text.get('1.0', tk.END.strip()),
+            "speakers": [],
+            "hotkey_markers": []
+        }
+        
         self.recording = True
+        self.transcribing = True
+        self.markers = []
         self.record_btn.configure(text="Stop Recording")
         self.start_time = time.time()
         self.update_timer()
-        self.recorder.start()
+        
+        # Clear displays
+        self.transcript_text.delete('1.0', tk.END)
+        self.response_text.delete('1.0', tk.END)
+        
+        self.recorder.start(callback=self.process_audio_chunk)
+        
+    def process_audio_chunk(self, audio_chunk):
+        """Process audio chunks for live transcription"""
+        if self.transcribing:
+            try:
+                # This will be implemented with AssemblyAI
+                pass
+            except Exception as e:
+                print(f"Transcription error: {e}")
         
     def stop_recording(self):
         if hasattr(self, 'recorder'):
             audio_data = self.recorder.stop()
-            filename = f"recording_{datetime.now().strftime('%H%M%S')}"
-            saved_path = self.app.file_handler.save_recording(audio_data, filename)
-            self.preview_text.insert('end', f"Recording saved: {saved_path}\n")
+            
+            # Update metadata with markers
+            self.metadata["hotkey_markers"] = [
+                {
+                    "timestamp": f"{int(m['timestamp'] // 60):02d}:{int(m['timestamp'] % 60):02d}",
+                    "key": m['key']
+                } for m in self.markers
+            ]
+            
+            # Save recording with metadata
+            filename = f"{self.meeting_name.get()}_{datetime.now().strftime('%H%M%S')}"
+            saved_path = self.app.file_handler.save_recording(
+                audio_data, 
+                filename,
+                metadata=self.metadata
+            )
+            
+            self.transcript_text.insert('end', f"\n\nRecording saved: {saved_path}\n")
             
         self.recording = False
+        self.transcribing = False
         self.record_btn.configure(text="Start Recording")
         
     def update_timer(self):
