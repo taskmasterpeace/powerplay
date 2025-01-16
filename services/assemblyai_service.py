@@ -25,7 +25,7 @@ class AssemblyAITranscriptionService(TranscriptionService):
             if config.get('entity'):
                 config_params['entity_detection'] = True
             if config.get('keyphrases'):
-                config_params['auto_highlights'] = True  # AssemblyAI uses auto_highlights for key phrases
+                config_params['auto_highlights'] = True
             if config.get('summary'):
                 config_params['summarization'] = True
                 
@@ -41,6 +41,14 @@ class AssemblyAITranscriptionService(TranscriptionService):
             
         # Build formatted output
         formatted_text = []
+        
+        def format_timestamp(ms):
+            """Convert milliseconds to HH:MM:SS format"""
+            seconds = int(ms / 1000)
+            hours = seconds // 3600
+            minutes = (seconds % 3600) // 60
+            seconds = seconds % 60
+            return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
         
         # Add summary if enabled
         if config.get('summary') and transcript.summary:
@@ -76,8 +84,18 @@ class AssemblyAITranscriptionService(TranscriptionService):
         formatted_text.append("=== Transcript ===")
         if config.get('speaker_labels'):
             for utterance in transcript.utterances:
-                formatted_text.append(f"Speaker {utterance.speaker}: {utterance.text}")
+                if config.get('timestamps'):
+                    start_time = format_timestamp(utterance.start)
+                    formatted_text.append(f"[{start_time}] Speaker {utterance.speaker}: {utterance.text}")
+                else:
+                    formatted_text.append(f"Speaker {utterance.speaker}: {utterance.text}")
         else:
-            formatted_text.append(transcript.text)
+            if config.get('timestamps'):
+                # Get sentences with timestamps
+                for sentence in transcript.get_sentences():
+                    start_time = format_timestamp(sentence.start)
+                    formatted_text.append(f"[{start_time}] {sentence.text}")
+            else:
+                formatted_text.append(transcript.text)
         
         return "\n".join(formatted_text)

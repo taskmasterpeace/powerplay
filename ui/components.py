@@ -70,6 +70,13 @@ class ModelSelectionFrame(ttk.LabelFrame):
                                            variable=self.summary_var)
         self.summary_check.pack(pady=2)
         
+        # Timestamps
+        self.timestamps_var = tk.BooleanVar(value=False)
+        self.timestamps_check = ttk.Checkbutton(self.assemblyai_frame,
+                                              text="Include Timestamps",
+                                              variable=self.timestamps_var)
+        self.timestamps_check.pack(pady=2)
+        
         # Pack AssemblyAI frame
         self.assemblyai_frame.pack(fill=tk.X, pady=5, padx=5)
         self.toggle_assemblyai_features()

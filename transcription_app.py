@@ -115,7 +115,8 @@ class TranscriptionApp:
                     'chapters': self.main_window.model_frame.chapters_var.get(),
                     'entity': self.main_window.model_frame.entity_var.get(),
                     'keyphrases': self.main_window.model_frame.keyphrases_var.get(),
-                    'summary': self.main_window.model_frame.summary_var.get()
+                    'summary': self.main_window.model_frame.summary_var.get(),
+                    'timestamps': self.main_window.model_frame.timestamps_var.get()
                 }
                 
                 # Transcribe file
