@@ -268,7 +268,9 @@ class CalendarView(ttk.Frame):
             file_path = next((fp for fp in self.audio_files[date_str] 
                             if os.path.basename(fp) == file_name), None)
             if file_path:
-                self.display_audio_details(file_path)
+                # Update UI to show file is selected
+                has_transcript = self.app.file_handler.check_transcript_exists(file_path)
+                self.view_transcript_btn.configure(state='normal' if has_transcript else 'disabled')
                 
     def on_file_double_click(self, event):
         """Handle double-click on file in listbox"""
