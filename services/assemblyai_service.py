@@ -15,13 +15,21 @@ class AssemblyAITranscriptionService(TranscriptionService):
             raise ValueError("AssemblyAI transcriber not initialized")
             
         # Configure enabled features
-        transcription_config = aai.TranscriptionConfig(
-            speaker_labels=config.get('speaker_labels', False) if config else False,
-            auto_chapters=config.get('chapters', False) if config else False,
-            entity_detection=config.get('entity', False) if config else False,
-            key_phrases=config.get('keyphrases', False) if config else False,
-            summarization=config.get('summary', False) if config else False
-        )
+        config_params = {}
+        
+        if config:
+            if config.get('speaker_labels'):
+                config_params['speaker_labels'] = True
+            if config.get('chapters'):
+                config_params['auto_chapters'] = True
+            if config.get('entity'):
+                config_params['entity_detection'] = True
+            if config.get('keyphrases'):
+                config_params['auto_highlights'] = True  # AssemblyAI uses auto_highlights for key phrases
+            if config.get('summary'):
+                config_params['summarization'] = True
+                
+        transcription_config = aai.TranscriptionConfig(**config_params)
         
         transcript = self.transcriber.transcribe(
             file_path,
