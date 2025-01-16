@@ -78,30 +78,39 @@ class FileHandler:
         transcript_path = path.parent / f"{path.stem}_transcript.{output_type}"
         return transcript_path.exists()
 
-    def get_mp3_files(self, folder_path):
-        """Return list of MP3 files with transcript status"""
+    def get_mp3_files(self, folder_path: str | Path) -> Tuple[List[str], Dict[str, bool]]:
+        """Return list of MP3 files with transcript status.
+        
+        Args:
+            folder_path: Path to folder containing MP3 files.
+            
+        Returns:
+            Tuple containing:
+                - List of MP3 filenames
+                - Dictionary mapping filenames to transcript status
+        """
         print(f"Scanning folder: {folder_path}")
+        folder = Path(folder_path)
         mp3_files = []
         renamed_files = []  # Track files needing rename
         transcript_status = {}  # Track transcript status
         
         try:
             # First pass - check existing files and transcripts
-            for f in os.listdir(folder_path):
-                if not f.lower().endswith('.mp3'):
-                    print(f"Skipping non-MP3 file: {f}")
+            for f in folder.glob('*.mp3'):
+                if not f.name.lower().endswith('.mp3'):
+                    print(f"Skipping non-MP3 file: {f.name}")
                     continue
                 
-                file_path = os.path.join(folder_path, f)
-                has_transcript = self.check_transcript_exists(file_path)
-                transcript_status[f] = has_transcript
+                has_transcript = self.check_transcript_exists(f)
+                transcript_status[f.name] = has_transcript
                 
-                if not self.date_pattern.match(f):
-                    print(f"File {f} doesn't match YYMMDD_ convention")
-                    print(f"Original creation date: {self.get_creation_date(file_path)}")
-                    renamed_files.append(file_path)
+                if not self.date_pattern.match(f.name):
+                    print(f"File {f.name} doesn't match YYMMDD_ convention")
+                    print(f"Original creation date: {self.get_creation_date(f)}")
+                    renamed_files.append(f)
                 else:
-                    mp3_files.append(f)
+                    mp3_files.append(f.name)
             
             # Second pass - perform renames
             for file_path in renamed_files:
@@ -109,11 +118,9 @@ class FileHandler:
                 if new_filename:
                     mp3_files.append(new_filename)
                     # Transfer transcript status to new filename
-                    old_name = os.path.basename(file_path)
-                    transcript_status[new_filename] = transcript_status.pop(old_name)
+                    transcript_status[new_filename] = transcript_status.pop(file_path.name)
                 else:
-                    original_name = os.path.basename(file_path)
-                    self.skipped_files.append((original_name, "Failed to rename file"))
+                    self.skipped_files.append((file_path.name, "Failed to rename file"))
             
             # Sort the final list
             mp3_files.sort()
@@ -132,7 +139,15 @@ class FileHandler:
             return datetime.datetime.strptime(date_str, '%y%m%d')
         return None
     
-    def generate_output_filename(self, input_file, output_type):
-        """Generate output filename maintaining convention"""
-        base_name = os.path.splitext(input_file)[0]
-        return f"{base_name}_transcript.{output_type}"
+    def generate_output_filename(self, input_file: str | Path, output_type: str) -> str:
+        """Generate output filename maintaining convention.
+        
+        Args:
+            input_file: Input audio filename.
+            output_type: Desired output file extension.
+            
+        Returns:
+            str: Generated output filename with transcript suffix.
+        """
+        path = Path(input_file)
+        return f"{path.stem}_transcript.{output_type}"
