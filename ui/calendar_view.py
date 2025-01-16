@@ -63,8 +63,12 @@ class CalendarView(ttk.Frame):
         self.files_frame = ttk.LabelFrame(self.right_frame, text="Audio Files")
         self.files_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         
+        # Add files label
+        self.files_label = ttk.Label(self.files_frame, text="Files for selected date:")
+        self.files_label.pack(fill=tk.X, padx=5, pady=5)
+        
         # File listbox with scrollbar
-        self.file_list_frame = ttk.Frame(self.right_frame)
+        self.file_list_frame = ttk.Frame(self.files_frame)
         self.file_list_frame.pack(fill=tk.BOTH, expand=True)
         
         self.file_listbox = tk.Listbox(self.file_list_frame)
