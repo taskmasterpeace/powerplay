@@ -345,3 +345,23 @@ class RecordingFrame(ttk.Frame):
             except Exception as e:
                 print(f"Transcription processing error: {e}")
                 time.sleep(0.1)
+                
+    def format_transcript(self, packet):
+        """Format transcript with timestamp and speaker"""
+        timestamp = packet.get('timestamp', 0)
+        if isinstance(timestamp, (int, float)):
+            minutes = int(timestamp // 60)
+            seconds = int(timestamp % 60)
+            timestamp_str = f"[{minutes:02d}:{seconds:02d}]"
+        else:
+            timestamp_str = "[00:00]"
+            
+        speaker = packet.get('speaker', 'Speaker 1')
+        text = packet.get('text', '')
+        
+        return f"{timestamp_str} {speaker}: {text}\n"
+        
+    def update_transcript_display(self, text):
+        """Update transcript display with new text"""
+        self.transcript_text.insert(tk.END, text)
+        self.transcript_text.see(tk.END)
