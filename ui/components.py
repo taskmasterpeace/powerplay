@@ -27,13 +27,24 @@ class ModelSelectionFrame(ttk.LabelFrame):
         self.service_var = tk.StringVar(value="openai")
         ttk.Radiobutton(self, text="OpenAI Whisper", value="openai", 
                        variable=self.service_var,
-                       command=self.toggle_assemblyai_features).pack(pady=5)
+                       command=self.toggle_service_options).pack(pady=5)
         ttk.Radiobutton(self, text="AssemblyAI", value="assemblyai", 
                        variable=self.service_var,
-                       command=self.toggle_assemblyai_features).pack(pady=5)
+                       command=self.toggle_service_options).pack(pady=5)
         
         # Create AssemblyAI features frame
         self.assemblyai_frame = ttk.LabelFrame(self, text="AssemblyAI Features")
+        
+        # AssemblyAI Model Selection
+        self.model_var = tk.StringVar(value="best")
+        ttk.Radiobutton(self.assemblyai_frame, 
+                       text="Universal-2 (Best Accuracy)", 
+                       value="best",
+                       variable=self.model_var).pack(pady=2)
+        ttk.Radiobutton(self.assemblyai_frame, 
+                       text="Nano (Faster Processing)", 
+                       value="nano",
+                       variable=self.model_var).pack(pady=2)
         
         # Speaker Detection
         self.speaker_var = tk.BooleanVar(value=False)
@@ -81,8 +92,8 @@ class ModelSelectionFrame(ttk.LabelFrame):
         self.assemblyai_frame.pack(fill=tk.X, pady=5, padx=5)
         self.toggle_assemblyai_features()
         
-    def toggle_assemblyai_features(self):
-        """Enable/disable AssemblyAI specific features based on service selection"""
+    def toggle_service_options(self):
+        """Enable/disable service specific features based on selection"""
         if self.service_var.get() == "assemblyai":
             for child in self.assemblyai_frame.winfo_children():
                 child.configure(state=tk.NORMAL)

@@ -15,7 +15,11 @@ class AssemblyAITranscriptionService(TranscriptionService):
             raise ValueError("AssemblyAI transcriber not initialized")
             
         # Configure enabled features
-        config_params = {}
+        config_params = {
+            'speech_model': (aai.SpeechModel.best 
+                           if config.get('model') == 'best' 
+                           else aai.SpeechModel.nano)
+        }
         
         if config:
             if config.get('speaker_labels'):

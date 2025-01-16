@@ -111,6 +111,7 @@ class TranscriptionApp:
             try:
                 # Get transcription config
                 config = {
+                    'model': self.main_window.model_frame.model_var.get(),
                     'speaker_labels': self.main_window.model_frame.speaker_var.get(),
                     'chapters': self.main_window.model_frame.chapters_var.get(),
                     'entity': self.main_window.model_frame.entity_var.get(),
