@@ -1,6 +1,7 @@
 import datetime
 import re
 import os
+import json
 import platform
 from pathlib import Path
 from typing import Tuple, List, Dict, Optional
@@ -178,12 +179,13 @@ class FileHandler:
         dated_folder = self.get_dated_folder(source_type)
         return os.path.join(dated_folder, f"{path.stem}_transcript.{output_type}")
         
-    def save_recording(self, audio_data: bytes, filename: str) -> str:
+    def save_recording(self, audio_data: bytes, filename: str, metadata: dict = None) -> str:
         """Save a recording to the recordings folder.
         
         Args:
             audio_data: Raw audio data.
             filename: Desired filename.
+            metadata: Optional dictionary of metadata to save alongside recording.
             
         Returns:
             str: Full path to saved recording.
@@ -192,7 +194,15 @@ class FileHandler:
         date_str = datetime.datetime.now().strftime('%y%m%d_%H%M%S')
         output_path = os.path.join(dated_folder, f"{date_str}_{filename}.mp3")
         
+        # Save audio file
         with open(output_path, 'wb') as f:
             f.write(audio_data)
+            
+        # Save metadata if provided
+        if metadata:
+            metadata_path = output_path.replace('.mp3', '_metadata.json')
+            with open(metadata_path, 'w', encoding='utf-8') as f:
+                import json  # Add import at top of file if needed
+                json.dump(metadata, f, indent=2)
             
         return output_path
