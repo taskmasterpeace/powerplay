@@ -284,16 +284,19 @@ class CalendarView(ttk.Frame):
         # Jump to date in calendar
         file_date = datetime.strptime(date_str, '%Y-%m-%d').date()
         
-        # Remove any existing highlight
-        self.calendar.tag_remove(self.highlight_tag, self.calendar.get_date())
+        # Clear any existing temporary events
+        self.calendar.calevent_remove('temp_highlight')
         
-        # Set new date and highlight it
+        # Set new date and create temporary highlight event
         self.calendar.selection_set(file_date)
         self.calendar.see(file_date)
-        self.calendar.tag_add(self.highlight_tag, file_date)
+        self.calendar.calevent_create(file_date, 'temp_highlight', 'Selected')
+        
+        # Configure temporary highlight color
+        self.calendar.tag_config('temp_highlight', background='yellow')
         
         # Schedule highlight removal
-        self.after(500, lambda: self.calendar.tag_remove(self.highlight_tag, file_date))
+        self.after(500, lambda: self.calendar.calevent_remove('temp_highlight'))
         
         # Update file list for selected date
         self.on_date_select(None)
