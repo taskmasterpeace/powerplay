@@ -4,7 +4,7 @@ import os
 from datetime import datetime
 import time
 import pyaudio
-from moviepy.editor import VideoFileClip
+from pydub import AudioSegment
 from utils.audio_recorder import AudioRecorder
 
 class AudioSourceFrame(ttk.LabelFrame):
@@ -72,20 +72,19 @@ class SingleFileFrame(ttk.Frame):
                 
     def convert_to_mp3(self, video_path):
         try:
-            video = VideoFileClip(video_path)
-            audio = video.audio
+            # Load video audio using pydub
+            audio = AudioSegment.from_file(video_path)
             
             # Generate output path in imports folder
             output_path = self.app.file_handler.generate_output_filename(
                 video_path, "mp3", "imports")
                 
             # Export as 128kbps MP3
-            audio.write_audiofile(
+            audio.export(
                 output_path,
-                bitrate="128k",
-                fps=44100
+                format="mp3",
+                bitrate="128k"
             )
-            video.close()
             
             self.process_audio_file(output_path)
             
