@@ -163,6 +163,7 @@ class ProgressFrame(ttk.LabelFrame):
     def __init__(self, master, app):
         super().__init__(master, text="Progress")
         self.app = app
+        self.folder_path = None
         app.file_handler.add_folder_observer(self.on_folder_change)
         
         # Add completion time label
@@ -228,13 +229,10 @@ class ProgressFrame(ttk.LabelFrame):
         self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
         
     def update_progress(self, current_file, processed_count, total_count):
-        # Get and store folder path from FileSelectionFrame if not already set
+        # Use the current folder from file handler
         if not self.folder_path:
-            for widget in self.master.winfo_children():
-                if isinstance(widget, FileSelectionFrame):
-                    self.folder_path = widget.folder_path.get()
-                    print(f"Setting folder path: {self.folder_path}")  # Debug print
-                    break
+            self.folder_path = self.app.file_handler.get_current_folder()
+            print(f"Setting folder path: {self.folder_path}")  # Debug print
         
         self.status_var.set(f"Processing: {processed_count}/{total_count} files")
         self.current_file_var.set(f"Current file: {current_file}")
