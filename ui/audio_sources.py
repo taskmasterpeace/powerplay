@@ -289,12 +289,21 @@ class RecordingFrame(ttk.Frame):
                 print(f"Transcription error: {e}")
         
     def stop_recording(self):
+        # Stop recording first
+        audio_data = None
         if hasattr(self, 'recorder'):
             audio_data = self.recorder.stop()
             
+        # Stop transcription and clean up
         if hasattr(self, 'assemblyai_session'):
-            self.assemblyai_session.stop()
-            delattr(self, 'assemblyai_session')
+            try:
+                self.transcribing = False  # Stop processing loop first
+                time.sleep(0.5)  # Give processing loops time to stop
+                self.assemblyai_session.stop()
+            except Exception as e:
+                print(f"Error stopping AssemblyAI session: {e}")
+            finally:
+                delattr(self, 'assemblyai_session')
             
         # Update metadata with markers
         if hasattr(self, 'metadata'):
