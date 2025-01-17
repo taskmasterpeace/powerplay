@@ -44,54 +44,76 @@ class AssemblyAIRealTimeTranscription:
         
     def _process_audio(self):
         """Process and send audio data"""
+        loop = None
         try:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             
             async def sender():
-                while self.is_running and self.websocket:
-                    try:
-                        audio_data = self.audio_queue.get(timeout=1)
-                        if audio_data:
-                            # Convert to base64
-                            audio_base64 = base64.b64encode(audio_data).decode('utf-8')
-                            await self.websocket.send(json.dumps({
-                                "audio_data": audio_base64
-                            }))
-                    except queue.Empty:
-                        continue
-                    except Exception as e:
-                        print(f"Error sending audio: {e}")
-                        break
+                try:
+                    while self.is_running and self.websocket:
+                        try:
+                            audio_data = self.audio_queue.get(timeout=1)
+                            if audio_data and self.websocket:
+                                # Convert to base64
+                                audio_base64 = base64.b64encode(audio_data).decode('utf-8')
+                                await self.websocket.send(json.dumps({
+                                    "audio_data": audio_base64
+                                }))
+                        except queue.Empty:
+                            continue
+                        except Exception as e:
+                            print(f"Error sending audio data: {e}")
+                            break
+                finally:
+                    if self.websocket:
+                        await self.websocket.close()
                         
-            loop.run_until_complete(sender())
+            if loop.is_running():
+                loop.create_task(sender())
+            else:
+                loop.run_until_complete(sender())
+        except Exception as e:
+            print(f"Error in audio processing thread: {e}")
         finally:
-            loop.close()
+            if loop and not loop.is_closed():
+                loop.close()
         
     def _process_transcripts(self):
         """Receive and process transcription results"""
+        loop = None
         try:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             
             async def receiver():
-                while self.is_running and self.websocket:
-                    try:
-                        response = await self.websocket.recv()
-                        data = json.loads(response)
-                        if data.get("message_type") == "FinalTranscript":
-                            self.transcript_queue.put({
-                                'text': data['text'],
-                                'timestamp': data.get('audio_start'),
-                                'speaker': data.get('speaker', 'Speaker 1')
-                            })
-                    except Exception as e:
-                        print(f"Error receiving transcript: {e}")
-                        break
+                try:
+                    while self.is_running and self.websocket:
+                        try:
+                            response = await self.websocket.recv()
+                            data = json.loads(response)
+                            if data.get("message_type") == "FinalTranscript":
+                                self.transcript_queue.put({
+                                    'text': data['text'],
+                                    'timestamp': data.get('audio_start'),
+                                    'speaker': data.get('speaker', 'Speaker 1')
+                                })
+                        except Exception as e:
+                            print(f"Error receiving transcript data: {e}")
+                            break
+                finally:
+                    if self.websocket:
+                        await self.websocket.close()
                         
-            loop.run_until_complete(receiver())
+            if loop.is_running():
+                loop.create_task(receiver())
+            else:
+                loop.run_until_complete(receiver())
+        except Exception as e:
+            print(f"Error in transcript processing thread: {e}")
         finally:
-            loop.close()
+            if loop and not loop.is_closed():
+                loop.close()
         
     def start(self):
         """Start real-time transcription"""
