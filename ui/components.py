@@ -283,9 +283,13 @@ class ProgressFrame(ttk.LabelFrame):
         
     def view_transcript(self, filename):
         """Open transcript file in default text editor"""
-        folder_path = self.app.file_handler.get_current_folder()
-        if not folder_path:
-            print("No folder path set")
+        try:
+            folder_path = self.app.file_handler.get_current_folder()
+            if not folder_path:
+                print("No folder path set")
+                return
+        except Exception as e:
+            print(f"Error getting folder path in stop_recording: {str(e)}")
             return
                 
         base_name = os.path.splitext(filename)[0]
