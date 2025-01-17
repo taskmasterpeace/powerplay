@@ -7,15 +7,16 @@ import queue
 import threading
 import time
 from typing import Optional, Dict, Any
+from urllib.parse import urlencode
 
 class AssemblyAIRealTimeTranscription:
     """Handles real-time transcription using AssemblyAI's WebSocket API"""
     
     def __init__(self, api_key: str, sample_rate: int = 16000, 
-                 speaker_detection: bool = False):
+                 config: Optional[Dict] = None):
         self.api_key = api_key
         self.sample_rate = sample_rate
-        self.speaker_detection = speaker_detection
+        self.config = config or {}
         self.websocket: Optional[websockets.WebSocketClientProtocol] = None
         self.audio_queue = queue.Queue()
         self.transcript_queue = queue.Queue()
@@ -24,7 +25,17 @@ class AssemblyAIRealTimeTranscription:
         
     async def _connect(self):
         """Establish WebSocket connection with AssemblyAI"""
-        url = f"wss://api.assemblyai.com/v2/realtime/ws?sample_rate={self.sample_rate}"
+        # Build URL with configuration parameters
+        params = {
+            'sample_rate': self.sample_rate,
+            'speaker_labels': self.config.get('speaker_labels', False),
+            'word_boost': self.config.get('word_boost', []),
+            'disable_partial_transcripts': not self.config.get('partial_transcripts', True)
+        }
+        
+        # Convert params to URL query string
+        param_str = '&'.join(f"{k}={v}" for k, v in params.items() if v is not None)
+        url = f"wss://api.assemblyai.com/v2/realtime/ws?{param_str}"
         
         # Configure retry parameters
         retry_count = 0
@@ -63,12 +74,6 @@ class AssemblyAIRealTimeTranscription:
                 print(f"Connection attempt {retry_count} failed. Retrying in {wait_time} seconds...")
                 await asyncio.sleep(wait_time)
         
-        # Send configuration
-        await self.websocket.send(json.dumps({
-            "sample_rate": self.sample_rate,
-            "speaker_labels": self.speaker_detection,
-            "format_text": True
-        }))
         
     async def _run_transcription(self):
         """Main async routine for handling transcription"""
