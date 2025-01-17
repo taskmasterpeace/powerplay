@@ -5,6 +5,7 @@ import base64
 import audioop
 import queue
 import threading
+import time
 from typing import Optional, Dict, Any
 
 class AssemblyAIRealTimeTranscription:
