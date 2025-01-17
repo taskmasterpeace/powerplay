@@ -157,11 +157,13 @@ class FileSelectionFrame(ttk.LabelFrame):
         folder_path = filedialog.askdirectory()
         if folder_path:
             self.folder_path.set(folder_path)
+            self.app.file_handler.set_current_folder(folder_path)
 
 class ProgressFrame(ttk.LabelFrame):
-    def __init__(self, master):
+    def __init__(self, master, app):
         super().__init__(master, text="Progress")
-        self.folder_path = None  # Store folder path
+        self.app = app
+        app.file_handler.add_folder_observer(self.on_folder_change)
         
         # Add completion time label
         self.completion_var = tk.StringVar()
@@ -277,19 +279,16 @@ class ProgressFrame(ttk.LabelFrame):
                                 command=lambda: self.view_transcript(filename))
             view_btn.pack(side=tk.RIGHT, padx=5)
             
+    def on_folder_change(self, folder_path: str):
+        """Handle folder path updates"""
+        self.folder_path = folder_path
+        
     def view_transcript(self, filename):
         """Open transcript file in default text editor"""
-        if not self.folder_path:
-            # Try to get folder path from FileSelectionFrame
-            for widget in self.master.winfo_children():
-                if isinstance(widget, FileSelectionFrame):
-                    self.folder_path = widget.folder_path.get()
-                    print(f"Retrieved folder path: {self.folder_path}")  # Debug print
-                    break
-            
-            if not self.folder_path:
-                print("Could not find folder path")
-                return
+        folder_path = self.app.file_handler.get_current_folder()
+        if not folder_path:
+            print("No folder path set")
+            return
                 
         base_name = os.path.splitext(filename)[0]
         transcript_path = os.path.join(self.folder_path, f"{base_name}_transcript.txt")

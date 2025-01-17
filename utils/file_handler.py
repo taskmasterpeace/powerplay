@@ -30,6 +30,10 @@ class FileHandler:
             "batch": self.batch_dir
         }
         
+        # Current working folder
+        self._current_folder: Optional[str] = None
+        self._folder_observers: List[callable] = []
+        
     def setup_folders(self):
         """Create necessary folder structure"""
         for folder in self.folders.values():
@@ -180,6 +184,20 @@ class FileHandler:
         path = Path(input_file)
         dated_folder = self.get_dated_folder(source_type)
         return os.path.join(dated_folder, f"{path.stem}_transcript.{output_type}")
+        
+    def add_folder_observer(self, callback: callable):
+        """Add a callback to be notified when the current folder changes"""
+        self._folder_observers.append(callback)
+        
+    def set_current_folder(self, folder_path: str):
+        """Set the current working folder and notify observers"""
+        self._current_folder = folder_path
+        for callback in self._folder_observers:
+            callback(folder_path)
+            
+    def get_current_folder(self) -> Optional[str]:
+        """Get the current working folder"""
+        return self._current_folder
         
     def save_recording(self, audio_data: bytes, filename: str, metadata: dict = None) -> str:
         """Save a recording to the recordings folder.
