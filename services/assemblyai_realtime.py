@@ -25,36 +25,43 @@ class AssemblyAIRealTimeTranscription:
     async def _connect(self):
         """Establish WebSocket connection with AssemblyAI"""
         url = f"wss://api.assemblyai.com/v2/realtime/ws?sample_rate={self.sample_rate}"
-        extra_headers = {
-            "Authorization": self.api_key,
-        }
         
-        try:
-            self.websocket = await websockets.connect(
-                url,
-                extra_headers=extra_headers,
-                ping_interval=5,
-                ping_timeout=20
-            )
-            
-            # Send initial configuration
-            await self.websocket.send(json.dumps({
-                "sample_rate": self.sample_rate,
-                "word_boost": [],
-                "format_text": True
-            }))
-            
-            # Wait for and validate session begins message
-            response = await self.websocket.recv()
-            session_data = json.loads(response)
-            if "error" in session_data:
-                raise Exception(f"Connection failed: {session_data['error']}")
+        # Configure retry parameters
+        retry_count = 0
+        max_retries = 3
+        retry_delay = 1.0
+        
+        while retry_count < max_retries:
+            try:
+                self.websocket = await websockets.connect(
+                    url,
+                    extra_headers={"Authorization": self.api_key},
+                    ping_interval=5,
+                    ping_timeout=20
+                )
                 
-        except Exception as e:
-            print(f"WebSocket connection failed: {e}")
-            if self.websocket:
-                await self.websocket.close()
-            raise
+                # Wait for and validate session begins message
+                response = await self.websocket.recv()
+                session_data = json.loads(response)
+                
+                if session_data.get("message_type") == "SessionBegins":
+                    self.session_id = session_data.get("session_id")
+                    print(f"Session established: {self.session_id}")
+                    return
+                elif "error" in session_data:
+                    raise Exception(f"Connection failed: {session_data['error']}")
+                    
+            except Exception as e:
+                retry_count += 1
+                if retry_count >= max_retries:
+                    print(f"Failed to connect after {max_retries} attempts: {e}")
+                    if self.websocket:
+                        await self.websocket.close()
+                    raise
+                
+                wait_time = retry_delay * (2 ** retry_count)
+                print(f"Connection attempt {retry_count} failed. Retrying in {wait_time} seconds...")
+                await asyncio.sleep(wait_time)
         
         # Send configuration
         await self.websocket.send(json.dumps({
@@ -71,35 +78,56 @@ class AssemblyAIRealTimeTranscription:
                 try:
                     audio_data = self.audio_queue.get_nowait()
                     if audio_data:
-                        audio_base64 = base64.b64encode(audio_data).decode('utf-8')
-                        await self.websocket.send(json.dumps({
-                            "audio_data": audio_base64
-                        }))
+                        # Send raw binary audio data
+                        await self.websocket.send(audio_data)
                 except queue.Empty:
                     await asyncio.sleep(0.01)
                     continue
-                    
+                
                 # Handle receiving transcripts
                 try:
                     response = await asyncio.wait_for(self.websocket.recv(), timeout=0.1)
                     data = json.loads(response)
-                    if data.get("message_type") == "FinalTranscript":
+                    
+                    # Validate message schema
+                    if "message_type" not in data:
+                        continue
+                        
+                    msg_type = data["message_type"]
+                    
+                    if msg_type in ["PartialTranscript", "FinalTranscript"]:
+                        if "text" not in data:
+                            continue
+                            
                         self.transcript_queue.put({
                             'text': data['text'],
+                            'is_final': msg_type == "FinalTranscript",
                             'timestamp': data.get('audio_start'),
                             'speaker': data.get('speaker', 'Speaker 1')
                         })
+                    elif msg_type == "SessionTerminated":
+                        break
+                        
                 except asyncio.TimeoutError:
                     continue
                 except Exception as e:
                     print(f"Error processing transcript: {e}")
-                    break
-                    
+                    if "not authorized" in str(e).lower():
+                        print("Authorization failed - check API key")
+                        break
+                    elif "invalid request" in str(e).lower():
+                        print("Invalid message format")
+                        continue
+                        
         except Exception as e:
             print(f"Transcription loop error: {e}")
         finally:
             if self.websocket:
-                await self.websocket.close()
+                try:
+                    await self.websocket.send(json.dumps({"terminate_session": True}))
+                    await self.websocket.close()
+                except:
+                    pass
         
     def _process_transcripts(self):
         """Receive and process transcription results"""
