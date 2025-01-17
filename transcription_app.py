@@ -88,7 +88,18 @@ class TranscriptionApp:
         
     def process_files(self):
         print("Starting process_files")
-        folder_path = self.main_window.file_frame.folder_path.get()
+        # Get active tab from audio sources
+        current_tab = self.main_window.audio_source_frame.source_notebook.select()
+        tab_name = self.main_window.audio_source_frame.source_notebook.tab(current_tab, "text")
+        
+        if tab_name == "Folder":
+            folder_path = self.main_window.audio_source_frame.folder_frame.folder_path.get()
+        elif tab_name == "Single File":
+            file_path = self.main_window.audio_source_frame.file_frame.current_file
+            folder_path = os.path.dirname(file_path)
+        else:
+            raise ValueError("Invalid audio source tab selected")
+            
         print(f"Folder path: {folder_path}")
         mp3_files, transcript_status = self.file_handler.get_mp3_files(folder_path)
         print(f"Found MP3 files: {mp3_files}")
