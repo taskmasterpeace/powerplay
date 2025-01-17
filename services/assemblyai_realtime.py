@@ -44,30 +44,39 @@ class AssemblyAIRealTimeTranscription:
         
     def _process_audio(self):
         """Process and send audio data"""
-        async def sender():
-            while self.is_running:
-                try:
-                    audio_data = self.audio_queue.get(timeout=1)
-                    if audio_data and self.websocket:
-                        # Convert to base64
-                        audio_base64 = base64.b64encode(audio_data).decode('utf-8')
-                        await self.websocket.send(json.dumps({
-                            "audio_data": audio_base64
-                        }))
-                except queue.Empty:
-                    continue
-                except Exception as e:
-                    print(f"Error sending audio: {e}")
-                    break
-                    
-        asyncio.run(sender())
+        try:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            
+            async def sender():
+                while self.is_running and self.websocket:
+                    try:
+                        audio_data = self.audio_queue.get(timeout=1)
+                        if audio_data:
+                            # Convert to base64
+                            audio_base64 = base64.b64encode(audio_data).decode('utf-8')
+                            await self.websocket.send(json.dumps({
+                                "audio_data": audio_base64
+                            }))
+                    except queue.Empty:
+                        continue
+                    except Exception as e:
+                        print(f"Error sending audio: {e}")
+                        break
+                        
+            loop.run_until_complete(sender())
+        finally:
+            loop.close()
         
     def _process_transcripts(self):
         """Receive and process transcription results"""
-        async def receiver():
-            while self.is_running:
-                try:
-                    if self.websocket:
+        try:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            
+            async def receiver():
+                while self.is_running and self.websocket:
+                    try:
                         response = await self.websocket.recv()
                         data = json.loads(response)
                         if data.get("message_type") == "FinalTranscript":
@@ -76,22 +85,34 @@ class AssemblyAIRealTimeTranscription:
                                 'timestamp': data.get('audio_start'),
                                 'speaker': data.get('speaker', 'Speaker 1')
                             })
-                except Exception as e:
-                    print(f"Error receiving transcript: {e}")
-                    break
-                    
-        asyncio.run(receiver())
+                    except Exception as e:
+                        print(f"Error receiving transcript: {e}")
+                        break
+                        
+            loop.run_until_complete(receiver())
+        finally:
+            loop.close()
         
     def start(self):
         """Start real-time transcription"""
         self.is_running = True
         
+        # Create event loop for the main thread
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            
         # Start WebSocket connection
-        asyncio.run(self._connect())
+        loop.run_until_complete(self._connect())
         
         # Start processing threads
-        threading.Thread(target=self._process_audio, daemon=True).start()
-        threading.Thread(target=self._process_transcripts, daemon=True).start()
+        self.audio_thread = threading.Thread(target=self._process_audio, daemon=True)
+        self.transcript_thread = threading.Thread(target=self._process_transcripts, daemon=True)
+        
+        self.audio_thread.start()
+        self.transcript_thread.start()
         
     def process_audio_chunk(self, audio_data: bytes):
         """Process incoming audio chunk"""
@@ -117,15 +138,28 @@ class AssemblyAIRealTimeTranscription:
     def stop(self):
         """Stop transcription and close connection"""
         self.is_running = False
-        # Give processing threads time to complete
-        time.sleep(0.5)
+        
+        # Wait for processing threads to complete
+        if hasattr(self, 'audio_thread'):
+            self.audio_thread.join(timeout=1.0)
+        if hasattr(self, 'transcript_thread'):
+            self.transcript_thread.join(timeout=1.0)
         
         if self.websocket:
             try:
-                # Create a new event loop for websocket closure
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                loop.run_until_complete(self.websocket.close())
-                loop.close()
+                # Get or create event loop
+                try:
+                    loop = asyncio.get_event_loop()
+                except RuntimeError:
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                
+                # Close websocket connection
+                async def close_ws():
+                    await self.websocket.close()
+                    
+                loop.run_until_complete(close_ws())
             except Exception as e:
                 print(f"Error closing websocket: {e}")
+            finally:
+                self.websocket = None
