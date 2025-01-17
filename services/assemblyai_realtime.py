@@ -113,11 +113,18 @@ class AssemblyAIRealTimeTranscription:
         """Get recorded audio data"""
         return bytes(self._audio_data)
         
-    async def _stop(self):
-        """Internal async stop method"""
-        if self.websocket:
-            await self.websocket.close()
-            
     def stop(self):
         """Stop transcription and close connection"""
         self.is_running = False
+        # Give processing threads time to complete
+        time.sleep(0.5)
+        
+        if self.websocket:
+            try:
+                # Create a new event loop for websocket closure
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                loop.run_until_complete(self.websocket.close())
+                loop.close()
+            except Exception as e:
+                print(f"Error closing websocket: {e}")

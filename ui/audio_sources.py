@@ -6,7 +6,6 @@ import time
 import threading
 import pyaudio
 from pydub import AudioSegment
-import tkinter_async as tae
 from utils.audio_recorder import AudioRecorder
 from services.assemblyai_realtime import AssemblyAIRealTimeTranscription
 
@@ -305,11 +304,6 @@ class RecordingFrame(ttk.Frame):
         # Clean up websocket connection
         if hasattr(self, 'assemblyai_session'):
             try:
-                # Use tkinter-async to safely handle async operations
-                tae.async_call(
-                    self.assemblyai_session._stop(),
-                    wait=True
-                )
                 self.assemblyai_session.stop()
             except Exception as e:
                 print(f"Error stopping AssemblyAI session: {e}")
