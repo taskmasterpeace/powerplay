@@ -36,6 +36,26 @@ class FolderFrame(ttk.Frame):
                   command=self.select_folder).pack(pady=5)
         ttk.Label(self, textvariable=self.folder_path).pack(pady=5)
         
+        # Add control buttons
+        self.button_frame = ttk.Frame(self)
+        self.button_frame.pack(pady=5)
+        
+        self.start_button = ttk.Button(
+            self.button_frame,
+            text="Start Transcription",
+            command=self.app.start_transcription,
+            state=tk.NORMAL
+        )
+        self.start_button.pack(side=tk.LEFT, padx=5)
+        
+        self.stop_button = ttk.Button(
+            self.button_frame,
+            text="Stop",
+            command=self.app.stop_transcription,
+            state=tk.DISABLED
+        )
+        self.stop_button.pack(side=tk.LEFT, padx=5)
+        
     def select_folder(self):
         folder_path = filedialog.askdirectory()
         if folder_path:
@@ -55,6 +75,28 @@ class SingleFileFrame(ttk.Frame):
         
         self.file_label = ttk.Label(self, text="No file selected")
         self.file_label.pack(pady=5)
+        
+        # Add control buttons
+        self.button_frame = ttk.Frame(self)
+        self.button_frame.pack(pady=5)
+        
+        self.start_button = ttk.Button(
+            self.button_frame,
+            text="Start Transcription",
+            command=self.app.start_transcription,
+            state=tk.NORMAL
+        )
+        self.start_button.pack(side=tk.LEFT, padx=5)
+        
+        self.stop_button = ttk.Button(
+            self.button_frame,
+            text="Stop",
+            command=self.app.stop_transcription,
+            state=tk.DISABLED
+        )
+        self.stop_button.pack(side=tk.LEFT, padx=5)
+        
+        self.current_file = None  # Track selected file
         
     def import_file(self):
         file_types = [
@@ -91,7 +133,7 @@ class SingleFileFrame(ttk.Frame):
             
     def process_audio_file(self, file_path):
         self.file_label.config(text=os.path.basename(file_path))
-        # Add to processing queue or start transcription
+        self.current_file = file_path  # Store selected file path
 
 class RecordingFrame(ttk.Frame):
     def __init__(self, master, app):
