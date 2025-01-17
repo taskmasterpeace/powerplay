@@ -5,14 +5,20 @@ import os
 import platform
 import subprocess
 
+import os
+from dotenv import load_dotenv
+
 class APIKeyFrame(ttk.LabelFrame):
     def __init__(self, master):
         super().__init__(master, text="API Keys")
+        load_dotenv()
         
         # OpenAI API Key
         ttk.Label(self, text="OpenAI API Key:").pack(pady=5)
         self.openai_key = ttk.Entry(self, show="*")
         self.openai_key.pack(fill=tk.X, padx=5)
+        if os.getenv('OPENAI_API_KEY'):
+            self.openai_key.insert(0, os.getenv('OPENAI_API_KEY'))
         
         # AssemblyAI API Key
         ttk.Label(self, text="AssemblyAI API Key:").pack(pady=5)
