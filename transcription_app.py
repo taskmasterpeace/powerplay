@@ -14,15 +14,13 @@ class TranscriptionApp:
         self.master.title("MASSY - Multi-Service Audio Transcription")
         self.master.geometry("1200x800")
         
-        # Initialize services
+        # Initialize services and handlers
         self.openai_service = OpenAITranscriptionService()
         self.assemblyai_service = AssemblyAITranscriptionService()
+        self.file_handler = FileHandler()
         
         # Initialize UI
         self.main_window = MainWindow(master, self)
-        
-        # Initialize file handler
-        self.file_handler = FileHandler()
         
         # State variables
         self.stop_event = threading.Event()
