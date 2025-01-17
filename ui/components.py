@@ -45,6 +45,8 @@ class APIKeyFrame(ttk.LabelFrame):
                 
             messagebox.showinfo("Success", "API keys are present")
             # TODO: Add actual API validation calls here
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to validate API keys: {str(e)}")
 
 class ModelSelectionFrame(ttk.LabelFrame):
     def __init__(self, master):
