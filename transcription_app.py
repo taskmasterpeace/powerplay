@@ -161,6 +161,9 @@ class TranscriptionApp:
                 self.main_window.progress_frame.add_file_result(file_name, "Success")
                 successful_files += 1
                 
+                # Refresh calendar view after successful transcription
+                self.main_window.calendar_view.load_files_from_folder(folder_path)
+                
             except Exception as e:
                 self.file_handler.skipped_files.append((file_name, str(e)))
                 self.main_window.progress_frame.add_file_result(file_name, f"Failed: {str(e)}")
