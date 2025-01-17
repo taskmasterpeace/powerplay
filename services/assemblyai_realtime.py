@@ -113,8 +113,11 @@ class AssemblyAIRealTimeTranscription:
         """Get recorded audio data"""
         return bytes(self._audio_data)
         
+    async def _stop(self):
+        """Internal async stop method"""
+        if self.websocket:
+            await self.websocket.close()
+            
     def stop(self):
         """Stop transcription and close connection"""
         self.is_running = False
-        if self.websocket:
-            asyncio.run(self.websocket.close())
