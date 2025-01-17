@@ -24,6 +24,8 @@ class APIKeyFrame(ttk.LabelFrame):
         ttk.Label(self, text="AssemblyAI API Key:").pack(pady=5)
         self.assemblyai_key = ttk.Entry(self, show="*")
         self.assemblyai_key.pack(fill=tk.X, padx=5)
+        if os.getenv('ASSEMBLYAI_API_KEY'):
+            self.assemblyai_key.insert(0, os.getenv('ASSEMBLYAI_API_KEY'))
 
 class ModelSelectionFrame(ttk.LabelFrame):
     def __init__(self, master):
