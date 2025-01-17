@@ -40,6 +40,11 @@ class MainWindow:
         self.progress_frame = ProgressFrame(self.batch_frame, self.app)
         self.progress_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
         
+        # Recording View
+        from .audio_sources import RecordingFrame
+        self.recording_frame = RecordingFrame(self.notebook, self.app)
+        self.notebook.add(self.recording_frame, text="Record")
+        
         # Calendar View
         from .calendar_view import CalendarView
         self.calendar_view = CalendarView(self.notebook, self.app)  # Pass app reference

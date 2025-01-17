@@ -25,6 +25,11 @@ class AudioSourceFrame(ttk.LabelFrame):
         # Single file tab
         self.file_frame = SingleFileFrame(self.source_notebook, app)
         self.source_notebook.add(self.file_frame, text="Single File")
+        self.source_notebook.add(self.folder_frame, text="Folder")
+        
+        # Single file tab
+        self.file_frame = SingleFileFrame(self.source_notebook, app)
+        self.source_notebook.add(self.file_frame, text="Single File")
         
         # Recording tab
         self.recording_frame = RecordingFrame(self.source_notebook, app)
