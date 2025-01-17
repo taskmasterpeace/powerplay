@@ -199,6 +199,20 @@ class FileHandler:
         """Get the current working folder"""
         return self._current_folder
         
+    def load_files_from_folder(self, folder_path: str) -> Tuple[List[str], Dict[str, bool]]:
+        """Load audio files from a folder and return their transcript status.
+        
+        Args:
+            folder_path: Path to folder containing audio files
+            
+        Returns:
+            Tuple containing:
+                - List of audio filenames
+                - Dictionary mapping filenames to transcript status
+        """
+        self.set_current_folder(folder_path)
+        return self.get_mp3_files(folder_path)
+        
     def save_recording(self, audio_data: bytes, filename: str, metadata: dict = None) -> str:
         """Save a recording to the recordings folder.
         
