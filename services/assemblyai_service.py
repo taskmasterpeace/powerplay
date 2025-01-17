@@ -6,8 +6,8 @@ class AssemblyAITranscriptionService(TranscriptionService):
         super().__init__()
         self.transcriber = None
         
-    def setup(self, api_key):
-        aai.settings.api_key = api_key
+    def setup(self, api_key=None):
+        aai.settings.api_key = api_key or os.getenv('ASSEMBLYAI_API_KEY')
         self.transcriber = aai.Transcriber()
         
     def transcribe(self, file_path, config=None):

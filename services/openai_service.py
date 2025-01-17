@@ -7,8 +7,8 @@ class OpenAITranscriptionService(TranscriptionService):
         self.client = None
         self.model = "whisper-1"
         
-    def setup(self, api_key):
-        self.client = OpenAI(api_key=api_key)
+    def setup(self, api_key=None):
+        self.client = OpenAI(api_key=api_key or os.getenv('OPENAI_API_KEY'))
         
     def transcribe(self, file_path, config=None):
         if not self.client:
