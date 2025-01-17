@@ -242,11 +242,11 @@ class RecordingFrame(ttk.Frame):
             # Start transcription session
             self.assemblyai_session.start()
             
-            # Initialize audio recorder
+            # Initialize audio recorder with matching sample rate
             self.recorder = AudioRecorder(
                 format=pyaudio.paInt16,
                 channels=1,
-                rate=44100,
+                rate=16000,  # Match AssemblyAI's expected sample rate
                 chunk=1024,
                 mp3_bitrate='128k'
             )
@@ -292,7 +292,12 @@ class RecordingFrame(ttk.Frame):
         if hasattr(self, 'recorder'):
             audio_data = self.recorder.stop()
             
-            # Update metadata with markers
+        if hasattr(self, 'assemblyai_session'):
+            self.assemblyai_session.stop()
+            delattr(self, 'assemblyai_session')
+            
+        # Update metadata with markers
+        if hasattr(self, 'metadata'):
             self.metadata["hotkey_markers"] = [
                 {
                     "timestamp": f"{int(m['timestamp'] // 60):02d}:{int(m['timestamp'] % 60):02d}",
