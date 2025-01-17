@@ -1,3 +1,4 @@
+import os
 from openai import OpenAI
 from .base_service import TranscriptionService
 

@@ -1,3 +1,4 @@
+import os
 import assemblyai as aai
 from .base_service import TranscriptionService
 
