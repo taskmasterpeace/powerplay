@@ -37,7 +37,7 @@ class MainWindow:
         self.audio_source_frame.pack(fill=tk.X, padx=10, pady=5)
         
         # Progress Display
-        self.progress_frame = ProgressFrame(self.batch_frame)
+        self.progress_frame = ProgressFrame(self.batch_frame, self.app)
         self.progress_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
         
         # Calendar View
