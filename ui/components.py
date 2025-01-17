@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk, filedialog
+from tkinter import ttk, filedialog, messagebox
 import datetime
 import os
 import platform
@@ -26,6 +26,25 @@ class APIKeyFrame(ttk.LabelFrame):
         self.assemblyai_key.pack(fill=tk.X, padx=5)
         if os.getenv('ASSEMBLYAI_API_KEY'):
             self.assemblyai_key.insert(0, os.getenv('ASSEMBLYAI_API_KEY'))
+            
+        # Add Test Connection button
+        self.test_button = ttk.Button(self, text="Test Connections", 
+                                    command=self.test_connections)
+        self.test_button.pack(pady=10)
+        
+    def test_connections(self):
+        """Test both API connections"""
+        try:
+            openai_key = self.openai_key.get()
+            assemblyai_key = self.assemblyai_key.get()
+            
+            # Simple validation - check if keys are not empty
+            if not openai_key or not assemblyai_key:
+                messagebox.showerror("Error", "Please enter both API keys")
+                return
+                
+            messagebox.showinfo("Success", "API keys are present")
+            # TODO: Add actual API validation calls here
 
 class ModelSelectionFrame(ttk.LabelFrame):
     def __init__(self, master):
