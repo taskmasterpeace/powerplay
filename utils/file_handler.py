@@ -14,19 +14,21 @@ class FileHandler:
     """
     
     def __init__(self):
+        from config.constants import RECORDINGS_DIR, IMPORTS_DIR, BATCH_DIR
         self.processed_files: List[str] = []
         self.skipped_files: List[Tuple[str, str]] = []
         self.date_pattern = re.compile(r'^(\d{6})_.*\.mp3$')
         self.strict_naming = True
         
-        # Setup folder structure
-        self.base_dir = "audio_files"
+        # Use constants for folder structure
+        self.recordings_dir = RECORDINGS_DIR
+        self.imports_dir = IMPORTS_DIR 
+        self.batch_dir = BATCH_DIR
         self.folders = {
-            "recordings": os.path.join(self.base_dir, "recordings"),
-            "imports": os.path.join(self.base_dir, "imports"),
-            "batch": os.path.join(self.base_dir, "batch")
+            "recordings": self.recordings_dir,
+            "imports": self.imports_dir,
+            "batch": self.batch_dir
         }
-        self.setup_folders()
         
     def setup_folders(self):
         """Create necessary folder structure"""
