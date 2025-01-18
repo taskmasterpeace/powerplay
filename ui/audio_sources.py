@@ -144,9 +144,34 @@ class RecordingFrame(ttk.Frame):
         self.current_transcript = ""
         self.markers = []  # Store markers with timestamps
         
+        # State variables for interval processing
+        self.last_process_time = 0  # Tracks when we last processed text
+        self.accumulated_text = ""   # Holds text between processing intervals
+        
         # Meeting Configuration Frame
         self.config_frame = ttk.LabelFrame(self, text="Meeting Configuration")
         self.config_frame.pack(fill=tk.X, padx=5, pady=5)
+        
+        # Interval Selection Frame for processing chunks
+        self.interval_frame = ttk.Frame(self.config_frame)
+        self.interval_frame.pack(fill=tk.X, padx=5, pady=2)
+        
+        ttk.Label(self.interval_frame, text="Processing Interval:").pack(side=tk.LEFT)
+        self.interval_var = tk.StringVar(value="10s")
+        self.interval_combo = ttk.Combobox(
+            self.interval_frame,
+            textvariable=self.interval_var,
+            values=["5s", "10s", "20s", "45s", "instant"],
+            width=10,
+            state="readonly"
+        )
+        self.interval_combo.pack(side=tk.LEFT, padx=5)
+        
+        # Hotkey hint label
+        ttk.Label(self.interval_frame, text="(F12 for instant process)").pack(side=tk.LEFT, padx=5)
+        
+        # Bind F12 for instant processing
+        self.master.bind('<F12>', self.trigger_instant_processing)
         
         # Meeting Name
         ttk.Label(self.config_frame, text="Meeting Name:").pack(pady=2)
@@ -394,8 +419,38 @@ class RecordingFrame(ttk.Frame):
             self.time_label.configure(text=f"{minutes:02d}:{seconds:02d}")
             self.after(1000, self.update_timer)
             
+    def get_current_interval(self):
+        """Convert interval string to seconds"""
+        interval = self.interval_var.get()
+        if interval == "instant":
+            return 0
+        return int(interval.replace("s", ""))
+        
+    def trigger_instant_processing(self, event=None):
+        """Handle F12 key press for instant processing"""
+        if self.accumulated_text:
+            self.process_text_chunk(self.accumulated_text)
+            self.accumulated_text = ""
+            self.last_process_time = time.time()
+            
+    def process_text_chunk(self, text):
+        """
+        Process accumulated text chunk
+        Currently just displays in response window
+        Future: Will integrate with LLM processing
+        """
+        if text.strip():  # Only process non-empty text
+            self.response_text.insert(tk.END, 
+                f"\n\n=== New Chunk ({datetime.now().strftime('%H:%M:%S')}) ===\n")
+            self.response_text.insert(tk.END, text)
+            self.response_text.see(tk.END)
+            
     def process_transcriptions(self):
-        """Process incoming transcriptions"""
+        """Process incoming transcriptions with interval-based chunking"""
+        # Initialize processing state
+        self.last_process_time = time.time()
+        self.accumulated_text = ""
+        
         while self.recording:
             try:
                 packet = self.assemblyai_session.get_next_transcription()
@@ -403,8 +458,26 @@ class RecordingFrame(ttk.Frame):
                     # Format transcript with timestamp and speaker
                     formatted_transcript = self.format_transcript(packet)
                     
-                    # Update UI (thread-safe)
+                    # Update transcript display (thread-safe)
                     self.master.after(0, self.update_transcript_display, formatted_transcript)
+                    
+                    # Accumulate text for interval processing
+                    self.accumulated_text += formatted_transcript
+                    
+                    # Check if it's time to process the accumulated text
+                    current_time = time.time()
+                    interval = self.get_current_interval()
+                    
+                    # Process text if:
+                    # 1. We're in instant mode (interval=0), or
+                    # 2. Enough time has passed since last processing
+                    if (interval == 0 or  
+                        current_time - self.last_process_time >= interval) and \
+                        self.accumulated_text:
+                        
+                        self.process_text_chunk(self.accumulated_text)
+                        self.accumulated_text = ""
+                        self.last_process_time = current_time
                     
                     # Update metadata
                     if packet.get('speaker') and packet['speaker'] not in self.metadata['speakers']:
