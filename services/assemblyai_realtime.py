@@ -1,55 +1,50 @@
-import websockets
-import asyncio
-import json
-import base64
-import audioop
+import assemblyai as aai
 import queue
-import threading
-import time
-from typing import Optional, Dict, Any
-from urllib.parse import urlencode
+from typing import Optional, Dict, Any, Callable
 
 class AssemblyAIRealTimeTranscription:
-    """Handles real-time transcription using AssemblyAI's WebSocket API"""
+    """Handles real-time transcription using AssemblyAI's SDK"""
     
-    def __init__(self, api_key: str, sample_rate: int = 16000, 
-                 config: Optional[Dict] = None):
-        self.api_key = api_key
+    def __init__(self, api_key: str, sample_rate: int = 16000,
+                 on_data: Optional[Callable] = None,
+                 on_error: Optional[Callable] = None):
+        aai.settings.api_key = api_key
         self.sample_rate = sample_rate
-        self.config = config or {}
-        self.websocket: Optional[websockets.WebSocketClientProtocol] = None
-        self.audio_queue = queue.Queue()
         self.transcript_queue = queue.Queue()
         self.is_running = False
         self._audio_data = bytearray()
         
-    async def _connect(self):
-        """Establish WebSocket connection with AssemblyAI"""
-        # Build URL with configuration parameters
-        params = {
-            'sample_rate': self.sample_rate,
-            'speaker_labels': self.config.get('speaker_labels', False),
-            'word_boost': self.config.get('word_boost', []),
-            'disable_partial_transcripts': not self.config.get('partial_transcripts', True)
+        # Configure callbacks
+        self.on_data = on_data
+        self.on_error = on_error
+        
+        # Initialize transcriber
+        self.transcriber = aai.RealtimeTranscriber(
+            sample_rate=sample_rate,
+            on_data=self._handle_transcript,
+            on_error=self._handle_error,
+        )
+        
+    def _handle_transcript(self, transcript: aai.RealtimeTranscript):
+        """Internal handler for transcripts"""
+        if not transcript.text:
+            return
+            
+        result = {
+            'text': transcript.text,
+            'is_final': isinstance(transcript, aai.RealtimeFinalTranscript),
+            'timestamp': None  # AssemblyAI SDK doesn't provide timestamps in the same way
         }
         
-        # Convert params to URL query string
-        param_str = '&'.join(f"{k}={v}" for k, v in params.items() if v is not None)
-        url = f"wss://api.assemblyai.com/v2/realtime/ws?{param_str}"
+        self.transcript_queue.put(result)
         
-        # Configure retry parameters
-        retry_count = 0
-        max_retries = 3
-        retry_delay = 1.0
+        if self.on_data:
+            self.on_data(result)
         
-        while retry_count < max_retries:
-            try:
-                self.websocket = await websockets.connect(
-                    url,
-                    extra_headers={"Authorization": self.api_key},
-                    ping_interval=5,
-                    ping_timeout=20
-                )
+    def _handle_error(self, error: aai.RealtimeError):
+        """Internal handler for errors"""
+        if self.on_error:
+            self.on_error(error)
                 
                 # Wait for and validate session begins message
                 response = await self.websocket.recv()
@@ -75,19 +70,10 @@ class AssemblyAIRealTimeTranscription:
                 await asyncio.sleep(wait_time)
         
         
-    async def _run_transcription(self):
-        """Main async routine for handling transcription"""
-        try:
-            while self.is_running and self.websocket:
-                # Handle audio sending
-                try:
-                    audio_data = self.audio_queue.get_nowait()
-                    if audio_data:
-                        # Send raw binary audio data
-                        await self.websocket.send(audio_data)
-                except queue.Empty:
-                    await asyncio.sleep(0.01)
-                    continue
+    def start(self):
+        """Start real-time transcription"""
+        self.is_running = True
+        self.transcriber.connect()
                 
                 # Handle receiving transcripts
                 try:
@@ -170,24 +156,11 @@ class AssemblyAIRealTimeTranscription:
             if loop and not loop.is_closed():
                 loop.close()
         
-    def start(self):
-        """Start real-time transcription"""
-        def run_async_loop():
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            try:
-                self.is_running = True
-                loop.run_until_complete(self._connect())
-                loop.run_until_complete(self._run_transcription())
-            except Exception as e:
-                print(f"Transcription error: {e}")
-            finally:
-                self.is_running = False
-                if not loop.is_closed():
-                    loop.close()
-        
-        self.main_thread = threading.Thread(target=run_async_loop, daemon=True)
-        self.main_thread.start()
+    def process_audio_chunk(self, audio_data: bytes):
+        """Process incoming audio chunk"""
+        if self.is_running:
+            self._audio_data.extend(audio_data)
+            self.transcriber.stream(audio_data)
         
     def process_audio_chunk(self, audio_data: bytes):
         """Process incoming audio chunk"""
@@ -211,30 +184,7 @@ class AssemblyAIRealTimeTranscription:
         return bytes(self._audio_data)
         
     def stop(self):
-        """Stop transcription and close connection"""
-        self.is_running = False
-        
-        # Wait for processing threads to complete
-        if hasattr(self, 'audio_thread'):
-            self.audio_thread.join(timeout=1.0)
-        if hasattr(self, 'transcript_thread'):
-            self.transcript_thread.join(timeout=1.0)
-        
-        if self.websocket:
-            try:
-                # Get or create event loop
-                try:
-                    loop = asyncio.get_event_loop()
-                except RuntimeError:
-                    loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(loop)
-                
-                # Close websocket connection
-                async def close_ws():
-                    await self.websocket.close()
-                    
-                loop.run_until_complete(close_ws())
-            except Exception as e:
-                print(f"Error closing websocket: {e}")
-            finally:
-                self.websocket = None
+        """Stop transcription"""
+        if self.is_running:
+            self.is_running = False
+            self.transcriber.close()
