@@ -12,13 +12,14 @@ class AssemblyAIRealTimeTranscription:
         self.is_running = False
         self._audio_data = bytearray()
         
-        # Initialize transcriber
+        # Initialize transcriber with partial transcripts disabled
         self.transcriber = aai.RealtimeTranscriber(
             sample_rate=sample_rate,
             on_data=self._handle_transcript,
             on_error=self._handle_error,
             on_open=self._handle_open,
-            on_close=self._handle_close
+            on_close=self._handle_close,
+            disable_partial_transcripts=True
         )
         
     def _handle_open(self, session_opened: aai.RealtimeSessionOpened):
@@ -34,13 +35,14 @@ class AssemblyAIRealTimeTranscription:
         if not transcript.text:
             return
             
-        result = {
-            'text': transcript.text,
-            'is_final': isinstance(transcript, aai.RealtimeFinalTranscript),
-            'timestamp': None
-        }
-        
-        self.transcript_queue.put(result)
+        # Only process final transcripts
+        if isinstance(transcript, aai.RealtimeFinalTranscript):
+            result = {
+                'text': transcript.text,
+                'is_final': True,
+                'timestamp': None
+            }
+            self.transcript_queue.put(result)
         
     def _handle_error(self, error: aai.RealtimeError):
         """Internal handler for errors"""
