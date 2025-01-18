@@ -368,7 +368,19 @@ class RecordingFrame(ttk.Frame):
                 metadata=self.metadata
             )
             
-            self.transcript_text.insert('end', f"\n\nRecording saved: {saved_path}\n")
+            # Get the full transcript from the text widget
+            full_transcript = self.transcript_text.get('1.0', tk.END)
+            
+            # Generate and save transcript file next to the MP3
+            transcript_path = os.path.splitext(saved_path)[0] + '_transcript.txt'
+            try:
+                with open(transcript_path, 'w', encoding='utf-8') as f:
+                    f.write(full_transcript)
+                self.transcript_text.insert('end', f"\n\nTranscript saved: {transcript_path}\n")
+            except Exception as e:
+                self.transcript_text.insert('end', f"\n\nError saving transcript: {str(e)}\n")
+                
+            self.transcript_text.insert('end', f"\nRecording saved: {saved_path}\n")
             
         self.recording = False
         self.transcribing = False
