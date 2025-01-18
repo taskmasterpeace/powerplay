@@ -277,8 +277,7 @@ class RecordingFrame(ttk.Frame):
                 
             self.assemblyai_session = AssemblyAIRealTimeTranscription(
                 api_key=assemblyai_key,
-                sample_rate=16000,
-                speaker_detection=True
+                sample_rate=16000
             )
             
             # Start transcription session
