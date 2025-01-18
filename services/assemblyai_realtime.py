@@ -45,29 +45,6 @@ class AssemblyAIRealTimeTranscription:
         """Internal handler for errors"""
         if self.on_error:
             self.on_error(error)
-                
-                # Wait for and validate session begins message
-                response = await self.websocket.recv()
-                session_data = json.loads(response)
-                
-                if session_data.get("message_type") == "SessionBegins":
-                    self.session_id = session_data.get("session_id")
-                    print(f"Session established: {self.session_id}")
-                    return
-                elif "error" in session_data:
-                    raise Exception(f"Connection failed: {session_data['error']}")
-                    
-            except Exception as e:
-                retry_count += 1
-                if retry_count >= max_retries:
-                    print(f"Failed to connect after {max_retries} attempts: {e}")
-                    if self.websocket:
-                        await self.websocket.close()
-                    raise
-                
-                wait_time = retry_delay * (2 ** retry_count)
-                print(f"Connection attempt {retry_count} failed. Retrying in {wait_time} seconds...")
-                await asyncio.sleep(wait_time)
         
         
     def start(self):
@@ -162,16 +139,6 @@ class AssemblyAIRealTimeTranscription:
             self._audio_data.extend(audio_data)
             self.transcriber.stream(audio_data)
         
-    def process_audio_chunk(self, audio_data: bytes):
-        """Process incoming audio chunk"""
-        if self.is_running:
-            # Resample to 16kHz if needed
-            if self.sample_rate != 16000:
-                audio_data = audioop.ratecv(
-                    audio_data, 2, 1, 44100, 16000, None)[0]
-            self.audio_queue.put(audio_data)
-            self._audio_data.extend(audio_data)
-            
     def get_next_transcription(self) -> Optional[Dict[str, Any]]:
         """Get next available transcription result"""
         try:
