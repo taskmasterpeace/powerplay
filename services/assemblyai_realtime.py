@@ -59,12 +59,6 @@ class AssemblyAIRealTimeTranscription:
             self._audio_data.extend(audio_data)
             self.transcriber.stream(audio_data)
         
-    def process_audio_chunk(self, audio_data: bytes):
-        """Process incoming audio chunk"""
-        if self.is_running:
-            self._audio_data.extend(audio_data)
-            self.transcriber.stream(audio_data)
-        
     def get_next_transcription(self) -> Optional[Dict[str, Any]]:
         """Get next available transcription result"""
         try:
