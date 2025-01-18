@@ -5,25 +5,29 @@ from typing import Optional, Dict, Any, Callable
 class AssemblyAIRealTimeTranscription:
     """Handles real-time transcription using AssemblyAI's SDK"""
     
-    def __init__(self, api_key: str, sample_rate: int = 16000,
-                 on_data: Optional[Callable] = None,
-                 on_error: Optional[Callable] = None):
+    def __init__(self, api_key: str, sample_rate: int = 16000):
         aai.settings.api_key = api_key
         self.sample_rate = sample_rate
         self.transcript_queue = queue.Queue()
         self.is_running = False
         self._audio_data = bytearray()
         
-        # Configure callbacks
-        self.on_data = on_data
-        self.on_error = on_error
-        
         # Initialize transcriber
         self.transcriber = aai.RealtimeTranscriber(
             sample_rate=sample_rate,
             on_data=self._handle_transcript,
             on_error=self._handle_error,
+            on_open=self._handle_open,
+            on_close=self._handle_close
         )
+        
+    def _handle_open(self, session_opened: aai.RealtimeSessionOpened):
+        """Internal handler for session open"""
+        print("Session ID:", session_opened.session_id)
+        
+    def _handle_close(self):
+        """Internal handler for session close"""
+        print("Session closed")
         
     def _handle_transcript(self, transcript: aai.RealtimeTranscript):
         """Internal handler for transcripts"""
@@ -33,13 +37,10 @@ class AssemblyAIRealTimeTranscription:
         result = {
             'text': transcript.text,
             'is_final': isinstance(transcript, aai.RealtimeFinalTranscript),
-            'timestamp': None  # AssemblyAI SDK doesn't provide timestamps in the same way
+            'timestamp': None
         }
         
         self.transcript_queue.put(result)
-        
-        if self.on_data:
-            self.on_data(result)
         
     def _handle_error(self, error: aai.RealtimeError):
         """Internal handler for errors"""
