@@ -109,9 +109,15 @@ class MediaPlayerFrame(ttk.LabelFrame):
                 audio_mono = self.audio_data
                 
             time_axis = np.arange(len(audio_mono)) / self.sample_rate
-            self.ax.plot(time_axis, audio_mono)
+            self.ax.plot(time_axis, audio_mono, color='blue', alpha=0.5)
             self.ax.set_xlabel('Time (s)')
             self.ax.set_ylabel('Amplitude')
+            
+            # Re-add playhead line
+            self.playhead_line = self.ax.axvline(x=0, color='red', linewidth=1, zorder=10)
+            
+            # Adjust plot layout
+            self.fig.tight_layout()
             
             # Update canvas
             self.canvas.draw()
@@ -229,6 +235,8 @@ class MediaPlayerFrame(ttk.LabelFrame):
                     raise sd.CallbackStop()
                     
                 if self.current_position + frames > len(self.audio_data):
+                    self.playing = False
+                    self.play_button.configure(text="Play")
                     raise sd.CallbackStop()
                     
                 data = self.audio_data[self.current_position:self.current_position + frames]
@@ -254,8 +262,7 @@ class MediaPlayerFrame(ttk.LabelFrame):
             )
             
             with self.stream:
-                while self.playing:
-                    time.sleep(0.1)
+                sd.sleep(int(((len(self.audio_data) - self.current_position) / self.sample_rate) * 1000))
                     
         except Exception as e:
             print(f"Playback error: {str(e)}")
