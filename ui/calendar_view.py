@@ -299,16 +299,29 @@ class CalendarView(ttk.Frame):
             
     def on_date_select(self, event):
         """Handle date selection in calendar"""
-        selected_date = self.calendar.get_date()
-        self.files_label.config(text=f"Files for {selected_date}:")
-        
-        # Clear and repopulate listbox with only files from selected date
-        self.file_listbox.delete(0, tk.END)
-        
-        if selected_date in self.audio_files:
-            for file_path in self.audio_files[selected_date]:
-                display_name = f"{selected_date}: {os.path.basename(file_path)}"
-                self.file_listbox.insert(tk.END, display_name)
+        try:
+            selected_date = self.calendar.get_date()
+            # Validate date format and existence
+            datetime.strptime(selected_date, '%Y-%m-%d')
+            
+            self.files_label.config(text=f"Files for {selected_date}:")
+            
+            # Clear and repopulate listbox with only files from selected date
+            self.file_listbox.delete(0, tk.END)
+            
+            if selected_date in self.audio_files:
+                for file_path in self.audio_files[selected_date]:
+                    # Get file status and add to listbox with status indicator
+                    status = self.get_file_status(file_path)
+                    status_prefix = "📝 " if status["has_transcript"] else "🎵 "
+                    display_name = f"{selected_date}: {os.path.basename(file_path)}"
+                    self.file_listbox.insert(tk.END, f"{status_prefix}{display_name}")
+        except ValueError:
+            # Invalid date selected, reset to today
+            today = datetime.now().strftime('%Y-%m-%d')
+            self.calendar.selection_set(today)
+            self.files_label.config(text=f"Files for {today}:")
+            self.file_listbox.delete(0, tk.END)
                 
                 # Get file status and add to listbox with status indicator
                 status = self.get_file_status(file_path)
