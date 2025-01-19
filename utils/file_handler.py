@@ -216,19 +216,23 @@ class FileHandler:
         return self.get_mp3_files(folder_path)
         
     def save_recording(self, audio_data: bytes, filename: str, metadata: dict = None) -> str:
-        """Save a recording to the recordings folder.
+        """Save a recording to the recordings folder with standardized naming.
         
         Args:
             audio_data: Raw audio data.
-            filename: Desired filename.
+            filename: Base filename (will be standardized).
             metadata: Optional dictionary of metadata to save alongside recording.
             
         Returns:
             str: Full path to saved recording.
         """
         dated_folder = self.get_dated_folder("recordings")
-        date_str = datetime.datetime.now().strftime('%y%m%d_%H%M%S')
-        output_path = os.path.join(dated_folder, f"{date_str}_{filename}.mp3")
+        # Ensure filename follows YYMMDD_HHMM_name convention
+        if not re.match(r'^\d{6}_\d{4}_.*$', filename):
+            current_time = datetime.datetime.now()
+            filename = f"{current_time.strftime('%y%m%d_%H%M')}_{filename}"
+        
+        output_path = os.path.join(dated_folder, f"{filename}.mp3")
         
         # Save audio file
         with open(output_path, 'wb') as f:

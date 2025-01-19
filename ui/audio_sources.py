@@ -386,8 +386,9 @@ class RecordingFrame(ttk.Frame):
                 } for m in self.markers
             ]
             
-            # Save recording with metadata
-            filename = f"{self.meeting_name.get()}_{datetime.now().strftime('%H%M%S')}"
+            # Save recording with standardized naming
+            current_time = datetime.now()
+            filename = f"{current_time.strftime('%y%m%d_%H%M')}_{self.meeting_name.get()}"
             saved_path = self.app.file_handler.save_recording(
                 audio_data, 
                 filename,
