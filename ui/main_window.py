@@ -49,3 +49,8 @@ class MainWindow:
         from .calendar_view import CalendarView
         self.calendar_view = CalendarView(self.notebook, self.app)  # Pass app reference
         self.notebook.add(self.calendar_view, text="Calendar View")
+        
+        # Media Player View
+        from .media_player import MediaPlayerFrame
+        self.media_player = MediaPlayerFrame(self.notebook)
+        self.notebook.add(self.media_player, text="Media Player")

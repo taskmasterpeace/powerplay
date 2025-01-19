@@ -35,13 +35,9 @@ class CalendarView(ttk.Frame):
         # Configure highlight tag for calendar
         self.highlight_tag = 'highlight'
         
-        # Create main container with vertical split
-        self.main_container = ttk.PanedWindow(self, orient=tk.VERTICAL)
+        # Create main container with horizontal split only
+        self.main_container = ttk.PanedWindow(self, orient=tk.HORIZONTAL)
         self.main_container.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
-        
-        # Top section - Calendar and files
-        self.top_section = ttk.PanedWindow(self.main_container, orient=tk.HORIZONTAL)
-        self.main_container.add(self.top_section, weight=1)
         
         # Left side - Controls and Calendar
         self.left_frame = ttk.Frame(self.main_container)
@@ -85,9 +81,6 @@ class CalendarView(ttk.Frame):
         self.right_frame = ttk.Frame(self.top_section)
         self.top_section.add(self.right_frame, weight=2)
         
-        # Bottom section - Media Player
-        self.media_player = MediaPlayerFrame(self.main_container)
-        self.main_container.add(self.media_player, weight=1)
         
         # Create notebook for file views
         self.file_notebook = ttk.Notebook(self.right_frame)
@@ -353,11 +346,12 @@ class CalendarView(ttk.Frame):
                 has_transcript = self.app.file_handler.check_transcript_exists(file_path)
                 self.view_transcript_btn.configure(state='normal' if has_transcript else 'disabled')
                 
-                # Load audio and transcript in media player
-                self.media_player.load_audio(file_path)
+                # Load audio and transcript in media player and switch to media player tab
+                self.app.main_window.media_player.load_audio(file_path)
                 if has_transcript:
                     transcript_path = os.path.splitext(file_path)[0] + '_transcript.txt'
-                    self.media_player.load_transcript(transcript_path)
+                    self.app.main_window.media_player.load_transcript(transcript_path)
+                self.app.main_window.notebook.select(self.app.main_window.media_player)
                 
     def on_file_double_click(self, event):
         """Handle double-click on file in listbox"""
