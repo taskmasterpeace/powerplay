@@ -28,6 +28,7 @@ class CalendarView(ttk.Frame):
         self.audio_files = {}
         self.transcripts = {}
         self.current_folder = None
+        self.file_statuses = {}  # Track file statuses
         
         # Configure highlight tag for calendar
         self.highlight_tag = 'highlight'
@@ -97,6 +98,15 @@ class CalendarView(ttk.Frame):
         # Add files label
         self.files_label = ttk.Label(self.files_frame, text="Files for selected date:")
         self.files_label.pack(fill=tk.X, padx=5, pady=5)
+        
+        # Status indicator frame
+        self.status_frame = ttk.Frame(self.files_frame)
+        self.status_frame.pack(fill=tk.X, padx=5, pady=2)
+        
+        # Status legend
+        ttk.Label(self.status_frame, text="🔴 Audio Only").pack(side=tk.LEFT, padx=2)
+        ttk.Label(self.status_frame, text="🟡 Has Transcript").pack(side=tk.LEFT, padx=2)
+        ttk.Label(self.status_frame, text="🟢 Processed").pack(side=tk.LEFT, padx=2)
         
         # File listbox with scrollbar for date view
         self.file_list_frame = ttk.Frame(self.files_frame)
@@ -303,10 +313,18 @@ class CalendarView(ttk.Frame):
                 display_name = f"{selected_date}: {os.path.basename(file_path)}"
                 self.file_listbox.insert(tk.END, display_name)
                 
-                # Color code based on transcript status
-                has_transcript = self.app.file_handler.check_transcript_exists(file_path)
-                color = 'green' if has_transcript else 'red'
-                self.file_listbox.itemconfig(tk.END, {'fg': color})
+                # Get file status
+                status = self.get_file_status(file_path)
+                
+                # Add status indicator emoji
+                if status["processed_by_llm"]:
+                    prefix = "🟢 "
+                elif status["has_transcript"]:
+                    prefix = "🟡 "
+                else:
+                    prefix = "🔴 "
+                
+                self.file_listbox.insert(tk.END, f"{prefix}{display_name}")
                 
     def on_file_select(self, event):
         """Handle file selection in listbox"""
@@ -435,6 +453,19 @@ class CalendarView(ttk.Frame):
         
         # Update file list for selected date
         self.on_date_select(None)
+        
+    def get_file_status(self, file_path: str) -> dict:
+        """Get status for a file, loading or creating metadata if needed"""
+        if file_path not in self.file_statuses:
+            status = FileStatus(file_path)
+            self.file_statuses[file_path] = status
+            
+            # Update transcript status
+            has_transcript = self.app.file_handler.check_transcript_exists(file_path)
+            if has_transcript != status.metadata["status"]["has_transcript"]:
+                status.update_status(has_transcript=has_transcript)
+                
+        return self.file_statuses[file_path].metadata["status"]
         
     def view_transcript(self):
         """View transcript for selected file and switch to calendar view"""

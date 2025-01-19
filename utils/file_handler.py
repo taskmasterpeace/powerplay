@@ -5,6 +5,48 @@ import json
 import platform
 from pathlib import Path
 from typing import Tuple, List, Dict, Optional
+import json
+from datetime import datetime
+
+class FileStatus:
+    """Manages status and metadata for audio files"""
+    
+    def __init__(self, file_path: str):
+        self.file_path = file_path
+        self.metadata_path = file_path.replace('.mp3', '_metadata.json')
+        self.load_metadata()
+        
+    def load_metadata(self):
+        """Load or initialize metadata"""
+        if os.path.exists(self.metadata_path):
+            with open(self.metadata_path, 'r', encoding='utf-8') as f:
+                self.metadata = json.load(f)
+        else:
+            self.metadata = {
+                "status": {
+                    "has_audio": True,
+                    "has_transcript": False,
+                    "processed_by_llm": False,
+                    "last_modified": datetime.now().strftime('%y%m%d_%H%M'),
+                    "chunks": []
+                },
+                "summary": None,
+                "chapters": [],
+                "tags": [],
+                "notes": ""
+            }
+            self.save_metadata()
+            
+    def update_status(self, **kwargs):
+        """Update status fields and save"""
+        self.metadata["status"].update(kwargs)
+        self.metadata["status"]["last_modified"] = datetime.now().strftime('%y%m%d_%H%M')
+        self.save_metadata()
+        
+    def save_metadata(self):
+        """Save metadata to file"""
+        with open(self.metadata_path, 'w', encoding='utf-8') as f:
+            json.dump(self.metadata, f, indent=2)
 
 class FileHandler:
     """Handles file operations for audio transcription files.
