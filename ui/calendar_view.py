@@ -35,13 +35,17 @@ class CalendarView(ttk.Frame):
         # Configure highlight tag for calendar
         self.highlight_tag = 'highlight'
         
-        # Create main container with horizontal split only
+        # Create main container with horizontal split
         self.main_container = ttk.PanedWindow(self, orient=tk.HORIZONTAL)
         self.main_container.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
-        
+
+        # Create top section paned window
+        self.top_section = ttk.PanedWindow(self.main_container, orient=tk.HORIZONTAL)
+        self.main_container.add(self.top_section)
+
         # Left side - Controls and Calendar
-        self.left_frame = ttk.Frame(self.main_container)
-        self.main_container.add(self.left_frame, weight=1)
+        self.left_frame = ttk.Frame(self.top_section)
+        self.top_section.add(self.left_frame, weight=1)
         
         # Folder selection
         self.folder_frame = ttk.LabelFrame(self.left_frame, text="Folder Selection")
