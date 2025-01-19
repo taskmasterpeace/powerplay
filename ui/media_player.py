@@ -12,6 +12,11 @@ class MediaPlayerFrame(ttk.LabelFrame):
     def __init__(self, master):
         super().__init__(master, text="Media Player")
         
+        # Filename display
+        self.filename_var = tk.StringVar(value="No file loaded")
+        self.filename_label = ttk.Label(self, textvariable=self.filename_var)
+        self.filename_label.pack(fill=tk.X, padx=5, pady=2)
+
         # Create main container
         self.main_container = ttk.PanedWindow(self, orient=tk.VERTICAL)
         self.main_container.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
@@ -24,6 +29,10 @@ class MediaPlayerFrame(ttk.LabelFrame):
         self.fig, self.ax = plt.subplots(figsize=(8, 2))
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.top_frame)
         self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+        
+        # Add playhead line
+        self.playhead_line = self.ax.axvline(x=0, color='red', linewidth=1)
+        self.canvas.mpl_connect('button_press_event', self.on_waveform_click)
         
         # Playback controls
         self.controls_frame = ttk.Frame(self.top_frame)
@@ -75,12 +84,16 @@ class MediaPlayerFrame(ttk.LabelFrame):
         self.audio_data = None
         self.sample_rate = None
         self.playing = False
+        self.paused = False
         self.current_position = 0
         self.stream = None
         self.play_thread = None
+        self.update_playhead_id = None
         
     def load_audio(self, file_path):
         """Load audio file and display waveform"""
+        # Update filename display
+        self.filename_var.set(file_path.split('/')[-1].split('\\')[-1])
         try:
             # Load audio file
             self.audio_data, self.sample_rate = sf.read(file_path)
@@ -122,16 +135,30 @@ class MediaPlayerFrame(ttk.LabelFrame):
             print(f"Error loading transcript: {str(e)}")
             
     def play_audio(self):
-        """Start audio playback"""
-        if not self.playing and self.audio_data is not None:
+        """Toggle play/pause audio playback"""
+        if self.audio_data is None:
+            return
+            
+        if self.playing:
+            # Pause playback
+            self.playing = False
+            self.paused = True
+            self.play_button.configure(text="Play")
+            if self.stream:
+                self.stream.stop()
+        else:
+            # Start/resume playback
             self.playing = True
+            self.paused = False
             self.play_button.configure(text="Pause")
             self.play_thread = threading.Thread(target=self._play_audio_thread)
             self.play_thread.start()
+            self.update_playhead()
             
     def stop_audio(self):
         """Stop audio playback"""
         self.playing = False
+        self.paused = False
         self.play_button.configure(text="Play")
         if self.stream:
             self.stream.stop()
@@ -139,11 +166,38 @@ class MediaPlayerFrame(ttk.LabelFrame):
             self.stream = None
         self.current_position = 0
         self.position_slider.set(0)
+        self.playhead_line.set_xdata(0)
+        self.canvas.draw_idle()
         
     def seek_position(self, value):
         """Handle seeking in audio"""
         if self.audio_data is not None:
             self.current_position = int(float(value) * len(self.audio_data) / 100)
+            # Update playhead position
+            time_position = self.current_position / self.sample_rate
+            self.playhead_line.set_xdata(time_position)
+            self.canvas.draw_idle()
+            
+    def on_waveform_click(self, event):
+        """Handle click on waveform"""
+        if event.inaxes == self.ax and self.audio_data is not None:
+            # Convert x position to samples
+            click_time = event.xdata
+            self.current_position = int(click_time * self.sample_rate)
+            # Update slider
+            position_percent = (self.current_position / len(self.audio_data)) * 100
+            self.position_slider.set(position_percent)
+            # Update playhead
+            self.playhead_line.set_xdata(click_time)
+            self.canvas.draw_idle()
+            
+    def update_playhead(self):
+        """Update playhead position during playback"""
+        if self.playing and self.audio_data is not None:
+            time_position = self.current_position / self.sample_rate
+            self.playhead_line.set_xdata(time_position)
+            self.canvas.draw_idle()
+            self.update_playhead_id = self.after(50, self.update_playhead)
             
     def search_transcript(self):
         """Search within transcript"""
