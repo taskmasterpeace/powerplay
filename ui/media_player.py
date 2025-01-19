@@ -234,31 +234,29 @@ class MediaPlayerFrame(ttk.LabelFrame):
                 if not self.playing:
                     raise sd.CallbackStop()
                 
-                remaining_frames = len(self.audio_data) - self.current_position
-                if remaining_frames <= 0:
+                # Get data from current position
+                data = self.audio_data[self.current_position:self.current_position + frames]
+                
+                # Check if we've reached the end
+                if len(data) == 0:
                     self.playing = False
                     self.after(0, lambda: self.play_button.configure(text="Play"))
                     raise sd.CallbackStop()
                 
-                # Calculate how many frames we can actually write
-                frames_to_write = min(frames, remaining_frames)
-                data = self.audio_data[self.current_position:self.current_position + frames_to_write]
+                # Reshape data if needed
+                if len(data.shape) == 1:
+                    data = data.reshape(-1, 1)
                 
-                # Ensure the output shape matches what sounddevice expects
-                if len(data) > 0:
-                    if len(data.shape) == 1:
-                        data = data.reshape(-1, 1)
-                    outdata[:len(data)] = data
-                    if len(data) < len(outdata):
-                        outdata[len(data):] = 0
-                    
-                    self.current_position += frames_to_write
-                    
-                    # Update UI elements from the main thread
-                    self.after(0, self._update_playback_position)
-                else:
-                    raise sd.CallbackStop()
+                # Write data to output buffer
+                outdata[:len(data)] = data
+                if len(data) < len(outdata):
+                    outdata[len(data):] = 0
+                
+                # Update position and UI
+                self.current_position += len(data)
+                self.after(0, self._update_playback_position)
             
+            # Create and start stream
             self.stream = sd.OutputStream(
                 channels=1,
                 samplerate=self.sample_rate,
@@ -266,13 +264,7 @@ class MediaPlayerFrame(ttk.LabelFrame):
             )
             
             with self.stream:
-                self.stream.start()
-                while self.playing:
-                    sd.sleep(50)  # Shorter sleep interval
-                    if self.current_position >= len(self.audio_data):
-                        self.playing = False
-                        self.after(0, lambda: self.play_button.configure(text="Play"))
-                        break
+                sd.sleep(int(((len(self.audio_data) - self.current_position) / self.sample_rate) * 1000))
                     
         except Exception as e:
             print(f"Playback error: {str(e)}")
