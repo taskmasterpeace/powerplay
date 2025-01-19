@@ -233,28 +233,32 @@ class MediaPlayerFrame(ttk.LabelFrame):
             def callback(outdata, frames, time, status):
                 if not self.playing:
                     raise sd.CallbackStop()
-                    
-                if self.current_position + frames > len(self.audio_data):
+                
+                remaining_frames = len(self.audio_data) - self.current_position
+                if remaining_frames <= 0:
                     self.playing = False
                     self.play_button.configure(text="Play")
                     raise sd.CallbackStop()
+                
+                # Calculate how many frames we can actually write
+                frames_to_write = min(frames, remaining_frames)
+                data = self.audio_data[self.current_position:self.current_position + frames_to_write]
+                
+                # Ensure the output shape matches what sounddevice expects
+                if len(data) > 0:
+                    if len(data.shape) == 1:
+                        data = data.reshape(-1, 1)
+                    outdata[:len(data)] = data
+                    if len(data) < len(outdata):
+                        outdata[len(data):] = 0
                     
-                data = self.audio_data[self.current_position:self.current_position + frames]
-                outdata[:len(data)] = data.reshape(-1, 1)
-                self.current_position += frames
-                
-                # Update slider position
-                position_percent = (self.current_position / len(self.audio_data)) * 100
-                self.position_slider.set(position_percent)
-                
-                # Update time display
-                current_time = self.current_position / self.sample_rate
-                total_time = len(self.audio_data) / self.sample_rate
-                self.time_var.set(
-                    f"{int(current_time//60):02d}:{int(current_time%60):02d} / "
-                    f"{int(total_time//60):02d}:{int(total_time%60):02d}"
-                )
-                
+                    self.current_position += len(data)
+                    
+                    # Update UI elements from the main thread
+                    self.after(0, self._update_playback_position)
+                else:
+                    raise sd.CallbackStop()
+            
             self.stream = sd.OutputStream(
                 channels=1,
                 samplerate=self.sample_rate,
@@ -262,10 +266,29 @@ class MediaPlayerFrame(ttk.LabelFrame):
             )
             
             with self.stream:
-                sd.sleep(int(((len(self.audio_data) - self.current_position) / self.sample_rate) * 1000))
+                while self.playing:
+                    sd.sleep(100)  # Sleep for 100ms intervals
+                    if self.current_position >= len(self.audio_data):
+                        break
                     
         except Exception as e:
             print(f"Playback error: {str(e)}")
         finally:
             self.playing = False
             self.play_button.configure(text="Play")
+    def _update_playback_position(self):
+        """Update slider and time display from the main thread"""
+        if not self.playing:
+            return
+            
+        # Update slider position
+        position_percent = (self.current_position / len(self.audio_data)) * 100
+        self.position_slider.set(position_percent)
+        
+        # Update time display
+        current_time = self.current_position / self.sample_rate
+        total_time = len(self.audio_data) / self.sample_rate
+        self.time_var.set(
+            f"{int(current_time//60):02d}:{int(current_time%60):02d} / "
+            f"{int(total_time//60):02d}:{int(total_time%60):02d}"
+        )
