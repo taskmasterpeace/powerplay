@@ -161,8 +161,8 @@ class RecordingFrame(ttk.Frame):
         self.interval_combo = ttk.Combobox(
             self.interval_frame,
             textvariable=self.interval_var,
-            values=["5s", "10s", "20s", "45s"],
-            width=10,
+            values=["Complete Only", "5s", "10s", "20s", "45s"],
+            width=12,
             state="readonly"
         )
         self.interval_combo.pack(side=tk.LEFT, padx=5)
@@ -423,6 +423,8 @@ class RecordingFrame(ttk.Frame):
     def get_current_interval(self):
         """Convert interval string to seconds"""
         interval = self.interval_var.get()
+        if interval == "Complete Only":
+            return float('inf')  # Special value for complete-only mode
         return int(interval.replace("s", ""))
         
     def on_interval_change(self, event=None):
