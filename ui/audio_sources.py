@@ -161,11 +161,12 @@ class RecordingFrame(ttk.Frame):
         self.interval_combo = ttk.Combobox(
             self.interval_frame,
             textvariable=self.interval_var,
-            values=["5s", "10s", "20s", "45s", "instant"],
+            values=["5s", "10s", "20s", "45s"],
             width=10,
             state="readonly"
         )
         self.interval_combo.pack(side=tk.LEFT, padx=5)
+        self.interval_combo.bind('<<ComboboxSelected>>', self.on_interval_change)
         
         # Hotkey hint label
         ttk.Label(self.interval_frame, text="(F12 for instant process)").pack(side=tk.LEFT, padx=5)
@@ -422,9 +423,19 @@ class RecordingFrame(ttk.Frame):
     def get_current_interval(self):
         """Convert interval string to seconds"""
         interval = self.interval_var.get()
-        if interval == "instant":
-            return 0
         return int(interval.replace("s", ""))
+        
+    def on_interval_change(self, event=None):
+        """Handle interval change and process if needed"""
+        new_interval = self.get_current_interval()
+        current_time = time.time()
+        time_since_last = current_time - self.last_process_time
+        
+        # If we've accumulated more time than the new interval, process immediately
+        if time_since_last >= new_interval and self.accumulated_text:
+            self.process_text_chunk(self.accumulated_text)
+            self.accumulated_text = ""
+            self.last_process_time = current_time
         
     def trigger_instant_processing(self, event=None):
         """Handle F12 key press for instant processing"""
