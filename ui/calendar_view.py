@@ -323,11 +323,6 @@ class CalendarView(ttk.Frame):
             self.files_label.config(text=f"Files for {today}:")
             self.file_listbox.delete(0, tk.END)
                 
-                # Get file status and add to listbox with status indicator
-                status = self.get_file_status(file_path)
-                status_prefix = "📝 " if status["has_transcript"] else "🎵 "
-                self.file_listbox.insert(tk.END, f"{status_prefix}{display_name}")
-                
     def on_file_select(self, event):
         """Handle file selection in listbox"""
         selection = self.file_listbox.curselection()
