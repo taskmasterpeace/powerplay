@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from tkcalendar import Calendar
+from .media_player import MediaPlayerFrame
 from datetime import datetime
 import os
 import platform
@@ -34,9 +35,13 @@ class CalendarView(ttk.Frame):
         # Configure highlight tag for calendar
         self.highlight_tag = 'highlight'
         
-        # Create main container
-        self.main_container = ttk.PanedWindow(self, orient=tk.HORIZONTAL)
+        # Create main container with vertical split
+        self.main_container = ttk.PanedWindow(self, orient=tk.VERTICAL)
         self.main_container.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
+        # Top section - Calendar and files
+        self.top_section = ttk.PanedWindow(self.main_container, orient=tk.HORIZONTAL)
+        self.main_container.add(self.top_section, weight=1)
         
         # Left side - Controls and Calendar
         self.left_frame = ttk.Frame(self.main_container)
@@ -77,8 +82,12 @@ class CalendarView(ttk.Frame):
         self.calendar.bind('<<CalendarSelected>>', self.on_date_select)
         
         # Right side - File list and controls
-        self.right_frame = ttk.Frame(self.main_container)
-        self.main_container.add(self.right_frame, weight=2)
+        self.right_frame = ttk.Frame(self.top_section)
+        self.top_section.add(self.right_frame, weight=2)
+        
+        # Bottom section - Media Player
+        self.media_player = MediaPlayerFrame(self.main_container)
+        self.main_container.add(self.media_player, weight=1)
         
         # Create notebook for file views
         self.file_notebook = ttk.Notebook(self.right_frame)
@@ -330,8 +339,10 @@ class CalendarView(ttk.Frame):
             return
             
         item_text = self.file_listbox.get(selection[0])
-        date_str = item_text.split(": ")[0]  # Extract date from "YYYY-MM-DD: filename"
-        file_name = item_text.split(": ")[1]  # Get filename part
+        # Remove any status emoji and clean up whitespace
+        clean_text = item_text.lstrip("🎵 ").lstrip("📝 ")
+        date_str = clean_text.split(": ")[0]  # Extract date from "YYYY-MM-DD: filename"
+        file_name = clean_text.split(": ")[1]  # Get filename part
         
         # Find full file path
         if date_str in self.audio_files:
@@ -341,6 +352,12 @@ class CalendarView(ttk.Frame):
                 # Update UI to show file is selected
                 has_transcript = self.app.file_handler.check_transcript_exists(file_path)
                 self.view_transcript_btn.configure(state='normal' if has_transcript else 'disabled')
+                
+                # Load audio and transcript in media player
+                self.media_player.load_audio(file_path)
+                if has_transcript:
+                    transcript_path = os.path.splitext(file_path)[0] + '_transcript.txt'
+                    self.media_player.load_transcript(transcript_path)
                 
     def on_file_double_click(self, event):
         """Handle double-click on file in listbox"""
