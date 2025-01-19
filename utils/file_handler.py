@@ -98,12 +98,12 @@ class FileHandler:
         path = Path(file_path)
         
         if platform.system() == 'Windows':
-            return datetime.datetime.fromtimestamp(path.stat().st_ctime)
+            return datetime.fromtimestamp(path.stat().st_ctime)
             
         try:
-            return datetime.datetime.fromtimestamp(path.stat().st_birthtime)
+            return datetime.fromtimestamp(path.stat().st_birthtime)
         except AttributeError:
-            return datetime.datetime.fromtimestamp(path.stat().st_mtime)
+            return datetime.fromtimestamp(path.stat().st_mtime)
 
     def rename_to_convention(self, original_path: str | Path) -> Optional[str]:
         """Renames file to match YYMMDD_ convention using file creation date.
