@@ -44,9 +44,23 @@ class CalendarView(ttk.Frame):
         self.folder_frame = ttk.LabelFrame(self.left_frame, text="Folder Selection")
         self.folder_frame.pack(fill=tk.X, padx=5, pady=5)
         
+        # Add folder controls frame
+        self.folder_controls = ttk.Frame(self.folder_frame)
+        self.folder_controls.pack(fill=tk.X, padx=5, pady=2)
+        
         self.folder_path = tk.StringVar()
-        ttk.Button(self.folder_frame, text="Select Folder", 
-                  command=self.select_folder).pack(pady=5)
+        ttk.Button(self.folder_controls, text="Select Folder", 
+                  command=self.select_folder).pack(side=tk.LEFT, pady=5)
+                  
+        # Add subfolder option
+        self.include_subfolders = tk.BooleanVar(value=False)
+        self.subfolder_check = ttk.Checkbutton(
+            self.folder_controls,
+            text="Include Subfolders",
+            variable=self.include_subfolders,
+            command=self.refresh_files
+        )
+        self.subfolder_check.pack(side=tk.LEFT, padx=5, pady=5)
         self.folder_label = ttk.Label(self.folder_frame, textvariable=self.folder_path,
                                     wraplength=200)
         self.folder_label.pack(pady=5)
@@ -145,16 +159,24 @@ class CalendarView(ttk.Frame):
             # Get both MP3 files and transcript files
             self.load_files_from_folder(folder_path)
             
+    def refresh_files(self):
+        """Refresh files based on current folder and subfolder setting"""
+        if self.current_folder:
+            self.load_files_from_folder(self.current_folder)
+            
     def load_files_from_folder(self, folder_path):
-        """Load all audio files from selected folder"""
+        """Load all audio files from selected folder and optionally subfolders"""
         self.audio_files.clear()
         self.file_listbox.delete(0, tk.END)
         self.all_files_listbox.delete(0, tk.END)
         
         print(f"Loading files from: {folder_path}")  # Debug print
         
-        # Use FileHandler to get files
-        mp3_files, transcript_status = self.app.file_handler.get_mp3_files(folder_path)
+        # Use FileHandler to get files with subfolder option
+        mp3_files, transcript_status = self.app.file_handler.get_mp3_files(
+            folder_path, 
+            include_subfolders=self.include_subfolders.get()
+        )
         
         print(f"Found MP3 files: {mp3_files}")  # Debug print
         

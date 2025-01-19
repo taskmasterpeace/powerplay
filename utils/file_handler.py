@@ -107,11 +107,12 @@ class FileHandler:
         transcript_path = path.parent / f"{path.stem}_transcript.{output_type}"
         return transcript_path.exists()
 
-    def get_mp3_files(self, folder_path: str | Path) -> Tuple[List[str], Dict[str, bool]]:
+    def get_mp3_files(self, folder_path: str | Path, include_subfolders: bool = False) -> Tuple[List[str], Dict[str, bool]]:
         """Return list of MP3 files with transcript status.
         
         Args:
             folder_path: Path to folder containing MP3 files.
+            include_subfolders: Whether to scan subfolders recursively.
             
         Returns:
             Tuple containing:
@@ -125,8 +126,9 @@ class FileHandler:
         transcript_status = {}  # Track transcript status
         
         try:
-            # First pass - check existing files and transcripts
-            for f in folder.glob('*.mp3'):
+            # Get files based on recursion setting
+            pattern = '**/*.mp3' if include_subfolders else '*.mp3'
+            for f in folder.glob(pattern):
                 print(f"Found MP3 file: {f.name}")  # Debug print
                 if not f.name.lower().endswith('.mp3'):
                     print(f"Skipping non-MP3 file: {f.name}")
