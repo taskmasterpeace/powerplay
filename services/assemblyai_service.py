@@ -48,7 +48,9 @@ class AssemblyAITranscriptionService(TranscriptionService):
                 raise Exception(f"Transcription failed: {transcript.error}")
                 
             # Build formatted output
-            return self.format_transcript(transcript, config)
+            formatted_transcript = self.format_transcript(transcript, config)
+            print(f"Generated transcript length: {len(formatted_transcript)} chars")
+            return formatted_transcript
             
         except Exception as e:
             print(f"AssemblyAI: Error during transcription: {str(e)}")

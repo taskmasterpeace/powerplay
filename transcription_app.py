@@ -148,7 +148,7 @@ class TranscriptionApp:
                 print(f"Transcription completed successfully")
                 
                 # Save transcript
-                output_file = self.file_handler.generate_output_filename(file_name, "txt")
+                output_file = f"{os.path.splitext(file_name)[0]}_transcript.txt"
                 output_path = os.path.join(folder_path, output_file)
                 
                 print(f"Saving transcript to: {output_path}")  # Debug print
