@@ -105,9 +105,8 @@ class CalendarView(ttk.Frame):
         self.status_frame.pack(fill=tk.X, padx=5, pady=2)
         
         # Status legend
-        ttk.Label(self.status_frame, text="🔴 Audio Only").pack(side=tk.LEFT, padx=2)
-        ttk.Label(self.status_frame, text="🟡 Has Transcript").pack(side=tk.LEFT, padx=2)
-        ttk.Label(self.status_frame, text="🟢 Processed").pack(side=tk.LEFT, padx=2)
+        ttk.Label(self.status_frame, text="🎵 Audio Only").pack(side=tk.LEFT, padx=2)
+        ttk.Label(self.status_frame, text="📝 Has Transcript").pack(side=tk.LEFT, padx=2)
         
         # File listbox with scrollbar for date view
         self.file_list_frame = ttk.Frame(self.files_frame)
@@ -221,14 +220,11 @@ class CalendarView(ttk.Frame):
             self.audio_files[date_str].append(file_path)
             print(f"Added file to date {date_str}: {file_path}")  # Debug print
             
-            # Add to all files listbox with date prefix
+            # Add to all files listbox with date prefix and status
+            status = self.get_file_status(file_path)
+            status_prefix = "📝 " if status["has_transcript"] else "🎵 "
             display_name = f"{date_str}: {os.path.basename(file_path)}"
-            self.all_files_listbox.insert(tk.END, display_name)
-            
-            # Color code based on transcript status
-            has_transcript = self.app.file_handler.check_transcript_exists(file_path)
-            color = 'green' if has_transcript else 'red'
-            self.all_files_listbox.itemconfig(tk.END, {'fg': color})
+            self.all_files_listbox.insert(tk.END, f"{status_prefix}{display_name}")
         
         print(f"Final audio_files dictionary: {self.audio_files}")  # Debug print
         
@@ -314,18 +310,10 @@ class CalendarView(ttk.Frame):
                 display_name = f"{selected_date}: {os.path.basename(file_path)}"
                 self.file_listbox.insert(tk.END, display_name)
                 
-                # Get file status
+                # Get file status and add to listbox with status indicator
                 status = self.get_file_status(file_path)
-                
-                # Add status indicator emoji
-                if status["processed_by_llm"]:
-                    prefix = "🟢 "
-                elif status["has_transcript"]:
-                    prefix = "🟡 "
-                else:
-                    prefix = "🔴 "
-                
-                self.file_listbox.insert(tk.END, f"{prefix}{display_name}")
+                status_prefix = "📝 " if status["has_transcript"] else "🎵 "
+                self.file_listbox.insert(tk.END, f"{status_prefix}{display_name}")
                 
     def on_file_select(self, event):
         """Handle file selection in listbox"""
