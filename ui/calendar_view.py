@@ -341,7 +341,9 @@ class CalendarView(ttk.Frame):
             return
             
         item_text = self.file_listbox.get(selection[0])
-        date_str = item_text.split(": ")[0]  # Extract date from "YYYY-MM-DD: filename"
+        # Remove any status emoji and clean up whitespace
+        clean_text = item_text.lstrip("🎵 ").lstrip("📝 ")
+        date_str = clean_text.split(": ")[0].strip()  # Extract and clean date
         
         # Jump to date in calendar
         file_date = datetime.strptime(date_str, '%Y-%m-%d').date()
