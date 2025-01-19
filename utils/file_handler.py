@@ -4,7 +4,7 @@ import json
 import platform
 from pathlib import Path
 from typing import Tuple, List, Dict, Optional
-from datetime import datetime
+from datetime import datetime, date
 
 class FileStatus:
     """Manages status and metadata for audio files"""

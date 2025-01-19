@@ -430,7 +430,9 @@ class CalendarView(ttk.Frame):
             return
             
         item_text = self.all_files_listbox.get(selection[0])
-        date_str = item_text.split(": ")[0]  # Extract date from "YYYY-MM-DD: filename"
+        # Remove any status emoji and leading/trailing spaces
+        clean_text = item_text.lstrip("🎵 ").lstrip("📝 ")
+        date_str = clean_text.split(": ")[0].strip()
         
         # Switch to date view tab
         self.file_notebook.select(0)
