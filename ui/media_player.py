@@ -237,7 +237,7 @@ class MediaPlayerFrame(ttk.LabelFrame):
                 remaining_frames = len(self.audio_data) - self.current_position
                 if remaining_frames <= 0:
                     self.playing = False
-                    self.play_button.configure(text="Play")
+                    self.after(0, lambda: self.play_button.configure(text="Play"))
                     raise sd.CallbackStop()
                 
                 # Calculate how many frames we can actually write
@@ -252,7 +252,7 @@ class MediaPlayerFrame(ttk.LabelFrame):
                     if len(data) < len(outdata):
                         outdata[len(data):] = 0
                     
-                    self.current_position += len(data)
+                    self.current_position += frames_to_write
                     
                     # Update UI elements from the main thread
                     self.after(0, self._update_playback_position)
@@ -266,9 +266,12 @@ class MediaPlayerFrame(ttk.LabelFrame):
             )
             
             with self.stream:
+                self.stream.start()
                 while self.playing:
-                    sd.sleep(100)  # Sleep for 100ms intervals
+                    sd.sleep(50)  # Shorter sleep interval
                     if self.current_position >= len(self.audio_data):
+                        self.playing = False
+                        self.after(0, lambda: self.play_button.configure(text="Play"))
                         break
                     
         except Exception as e:
