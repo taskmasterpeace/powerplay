@@ -130,6 +130,7 @@ class TranscriptionApp:
             self.main_window.progress_frame.update_progress(file_name, processed_count, total_files)
             
             try:
+                print(f"Starting transcription for: {file_path}")
                 # Get transcription config
                 config = {
                     'model': self.main_window.model_frame.model_var.get(),
@@ -140,9 +141,11 @@ class TranscriptionApp:
                     'summary': self.main_window.model_frame.summary_var.get(),
                     'timestamps': self.main_window.model_frame.timestamps_var.get()
                 }
+                print(f"Using config: {config}")
                 
                 # Transcribe file
                 transcript = self.current_service.transcribe(file_path, config)
+                print(f"Transcription completed successfully")
                 
                 # Save transcript
                 output_file = self.file_handler.generate_output_filename(file_name, "txt")

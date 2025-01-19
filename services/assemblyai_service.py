@@ -12,15 +12,18 @@ class AssemblyAITranscriptionService(TranscriptionService):
         self.transcriber = aai.Transcriber()
         
     def transcribe(self, file_path, config=None):
+        print(f"AssemblyAI: Starting transcription for {file_path}")
         if not self.transcriber:
             raise ValueError("AssemblyAI transcriber not initialized")
             
-        # Configure enabled features
-        config_params = {
-            'speech_model': (aai.SpeechModel.best 
-                           if config.get('model') == 'best' 
-                           else aai.SpeechModel.nano)
-        }
+        try:
+            # Configure enabled features
+            config_params = {
+                'speech_model': (aai.SpeechModel.best 
+                               if config.get('model') == 'best' 
+                               else aai.SpeechModel.nano)
+            }
+            print(f"AssemblyAI: Using config params: {config_params}")
         
         if config:
             if config.get('speaker_labels'):
