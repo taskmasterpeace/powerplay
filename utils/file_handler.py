@@ -1,11 +1,9 @@
-import datetime
 import re
 import os
 import json
 import platform
 from pathlib import Path
 from typing import Tuple, List, Dict, Optional
-import json
 from datetime import datetime
 
 class FileStatus:
@@ -88,7 +86,7 @@ class FileHandler:
         os.makedirs(folder_path, exist_ok=True)
         return folder_path
         
-    def get_creation_date(self, file_path: str | Path) -> datetime.datetime:
+    def get_creation_date(self, file_path: str | Path) -> datetime:
         """Gets file creation date in a cross-platform compatible way.
         
         Args:
