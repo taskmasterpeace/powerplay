@@ -7,7 +7,7 @@ import sounddevice as sd
 import numpy as np
 import threading
 import time
-from queue import Queue
+from queue import Queue, Empty
 
 class AudioPlayer:
     def __init__(self):
@@ -395,11 +395,10 @@ class MediaPlayerFrame(ttk.LabelFrame):
                     self._on_playback_complete()
                 elif msg_type == "error":
                     print(f"Audio Error: {data}")
-        except Queue.Empty:
+        except Empty:
             pass
         finally:
-            if self.playing:
-                self.after(100, self._check_audio_queue)
+            self.after(50, self._check_audio_queue)
     
     def _handle_position_update(self, position):
         """Handle position updates from audio thread"""
