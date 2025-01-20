@@ -16,6 +16,9 @@ class MainWindow:
         self.notebook = ttk.Notebook(self.master)
         self.notebook.pack(fill=tk.BOTH, expand=True)
         
+        # Set up window close protocol
+        self.master.protocol("WM_DELETE_WINDOW", self.on_closing)
+        
         # Create main frames
         self.create_frames()
         
@@ -54,3 +57,10 @@ class MainWindow:
         from .media_player import MediaPlayerFrame
         self.media_player = MediaPlayerFrame(self.notebook)
         self.notebook.add(self.media_player, text="Media Player")
+        
+    def on_closing(self):
+        """Handle application closing"""
+        # Stop any ongoing recording
+        if hasattr(self, 'recording_frame'):
+            self.recording_frame.stop_recording()
+        self.master.destroy()

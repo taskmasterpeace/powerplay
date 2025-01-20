@@ -141,7 +141,6 @@ class RecordingFrame(ttk.Frame):
         self.app = app
         self.recording = False
         self.transcribing = False
-        self.master.protocol("WM_DELETE_WINDOW", self.on_closing)
         self.current_transcript = ""
         self.markers = []  # Store markers with timestamps
         
