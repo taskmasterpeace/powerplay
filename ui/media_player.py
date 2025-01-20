@@ -7,6 +7,85 @@ import sounddevice as sd
 import numpy as np
 import threading
 import time
+from queue import Queue
+
+class AudioPlayer:
+    def __init__(self):
+        self.queue = Queue()
+        self.playing = False
+        self.stream = None
+        self.current_position = 0
+        self.audio_data = None
+        self.sample_rate = None
+        
+    def start(self, audio_data, sample_rate):
+        self.audio_data = audio_data
+        self.sample_rate = sample_rate
+        self.current_position = 0
+        self.playing = True
+        
+        def audio_thread():
+            try:
+                def callback(outdata, frames, time, status):
+                    if status:
+                        print("SoundDevice Callback Status:", status)
+                    
+                    if not self.playing:
+                        raise sd.CallbackStop()
+                    
+                    remaining = len(self.audio_data) - self.current_position
+                    if remaining <= 0:
+                        self.playing = False
+                        self.queue.put(("finished", None))
+                        raise sd.CallbackStop()
+                    
+                    chunk = self.audio_data[self.current_position:self.current_position + frames]
+                    frames_to_write = len(chunk)
+                    
+                    if len(chunk.shape) == 1:
+                        chunk = chunk.reshape(-1, 1)
+                    
+                    outdata[:frames_to_write] = chunk
+                    if frames_to_write < len(outdata):
+                        outdata[frames_to_write:] = 0
+                    
+                    self.current_position += frames_to_write
+                    self.queue.put(("position", self.current_position))
+                
+                channels = 2 if len(self.audio_data.shape) > 1 else 1
+                self.stream = sd.OutputStream(
+                    channels=channels,
+                    samplerate=self.sample_rate,
+                    dtype='float32',
+                    callback=callback,
+                    blocksize=4096,
+                    latency='high'
+                )
+                
+                with self.stream:
+                    while self.playing:
+                        sd.sleep(100)
+                        
+            except Exception as e:
+                print(f"Audio thread error: {e}")
+                self.queue.put(("error", str(e)))
+                
+        threading.Thread(target=audio_thread, daemon=True).start()
+    
+    def pause(self):
+        if self.stream:
+            self.stream.stop()
+    
+    def resume(self):
+        if self.stream:
+            self.stream.start()
+    
+    def stop(self):
+        self.playing = False
+        if self.stream:
+            self.stream.stop()
+            self.stream.close()
+            self.stream = None
 
 class MediaPlayerFrame(ttk.LabelFrame):
     def __init__(self, master):
@@ -90,7 +169,8 @@ class MediaPlayerFrame(ttk.LabelFrame):
         self.sample_rate = None
         self.playing = False
         self.paused = False
-        self.paused = False
+        self.audio_player = AudioPlayer()
+        self.after(100, self._check_audio_queue)
         self.current_position = 0
         self.stream = None
         self.play_thread = None
@@ -155,26 +235,19 @@ class MediaPlayerFrame(ttk.LabelFrame):
             self.paused = True
             self.playing = False
             self.play_button.configure(text="Play")
-            if self.stream:
-                self.stream.stop()
-            if self.update_timer_id:
-                self.after_cancel(self.update_timer_id)
-                self.update_timer_id = None
+            self.audio_player.pause()
         elif self.paused:
             # Resume playback
             self.paused = False
             self.playing = True
             self.play_button.configure(text="Pause")
-            if self.stream:
-                self.stream.start()
-            self._update_position()
+            self.audio_player.resume()
         else:
             # Start new playback
             self.playing = True
             self.paused = False
             self.play_button.configure(text="Pause")
-            self._start_playback()
-            self._update_position()
+            self.audio_player.start(self.audio_data, self.sample_rate)
             
     def stop_audio(self):
         """Stop audio playback"""
@@ -311,6 +384,42 @@ class MediaPlayerFrame(ttk.LabelFrame):
             f"{int(current_time//60):02d}:{int(current_time%60):02d} / "
             f"{int(total_time//60):02d}:{int(total_time%60):02d}"
         )
+    def _check_audio_queue(self):
+        """Check for messages from the audio thread"""
+        try:
+            while True:
+                msg_type, data = self.audio_player.queue.get_nowait()
+                if msg_type == "position":
+                    self._handle_position_update(data)
+                elif msg_type == "finished":
+                    self._on_playback_complete()
+                elif msg_type == "error":
+                    print(f"Audio Error: {data}")
+        except Queue.Empty:
+            pass
+        finally:
+            if self.playing:
+                self.after(100, self._check_audio_queue)
+    
+    def _handle_position_update(self, position):
+        """Handle position updates from audio thread"""
+        self.current_position = position
+        if (position % 2048) == 0:
+            position_percent = (position / len(self.audio_data)) * 100
+            self.position_slider.set(position_percent)
+            
+            current_time = position / self.sample_rate
+            total_time = len(self.audio_data) / self.sample_rate
+            self.time_var.set(
+                f"{int(current_time//60):02d}:{int(current_time%60):02d} / "
+                f"{int(total_time//60):02d}:{int(total_time%60):02d}"
+            )
+            
+        if (position % 8192) == 0:
+            current_time = position / self.sample_rate
+            self.playhead_line.set_xdata(current_time)
+            self.canvas.draw_idle()
+    
     def _update_position(self):
         """Update UI elements showing playback position"""
         if self.playing:
