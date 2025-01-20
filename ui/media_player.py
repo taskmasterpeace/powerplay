@@ -153,18 +153,22 @@ class MediaPlayerFrame(ttk.LabelFrame):
         if self.playing:
             # Pause playback
             self.playing = False
-            self.paused = True
             self.play_button.configure(text="Play")
             if self.stream:
                 self.stream.stop()
+            if self.update_timer_id:
+                self.after_cancel(self.update_timer_id)
+                self.update_timer_id = None
         else:
-            # Start/resume playback
+            # Start new playback
             self.playing = True
-            self.paused = False
             self.play_button.configure(text="Pause")
-            self.play_thread = threading.Thread(target=self._play_audio_thread)
-            self.play_thread.start()
-            self.update_playhead()
+            
+            # Create and start new stream
+            self._start_playback()
+            
+            # Start position updates
+            self._update_position()
             
     def stop_audio(self):
         """Stop audio playback"""
