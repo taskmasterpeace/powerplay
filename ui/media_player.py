@@ -285,8 +285,8 @@ class MediaPlayerFrame(ttk.LabelFrame):
                 samplerate=self.sample_rate,
                 dtype='float32',
                 callback=callback,
-                blocksize=2048,  # Larger block size for stability
-                latency='low'
+                blocksize=4096,  # Increased from 2048 to 4096
+                latency='high'   # Changed from 'low' to 'high'
             )
             
             # Start playback
@@ -314,25 +314,28 @@ class MediaPlayerFrame(ttk.LabelFrame):
     def _update_position(self):
         """Update UI elements showing playback position"""
         if self.playing:
-            # Update slider
-            position_percent = (self.current_position / len(self.audio_data)) * 100
-            self.position_slider.set(position_percent)
+            # Update slider and time less frequently
+            if (self.current_position % 2048) == 0:  # Only update every 2048 samples
+                # Update slider
+                position_percent = (self.current_position / len(self.audio_data)) * 100
+                self.position_slider.set(position_percent)
+                
+                # Update time display
+                current_time = self.current_position / self.sample_rate
+                total_time = len(self.audio_data) / self.sample_rate
+                self.time_var.set(
+                    f"{int(current_time//60):02d}:{int(current_time%60):02d} / "
+                    f"{int(total_time//60):02d}:{int(total_time%60):02d}"
+                )
             
-            # Update time display
-            current_time = self.current_position / self.sample_rate
-            total_time = len(self.audio_data) / self.sample_rate
-            self.time_var.set(
-                f"{int(current_time//60):02d}:{int(current_time%60):02d} / "
-                f"{int(total_time//60):02d}:{int(total_time%60):02d}"
-            )
-            
-            # Update playhead less frequently
-            if (self.current_position % 4096) == 0:  # Only update every 4096 samples
+            # Update playhead even less frequently
+            if (self.current_position % 8192) == 0:  # Only update every 8192 samples
+                current_time = self.current_position / self.sample_rate
                 self.playhead_line.set_xdata(current_time)
                 self.canvas.draw_idle()
             
             # Schedule next update with longer interval
-            self.update_timer_id = self.after(150, self._update_position)  # Changed from 50 to 150ms
+            self.update_timer_id = self.after(200, self._update_position)  # Increased from 150 to 200ms
             
     def _on_playback_complete(self):
         """Handle playback completion"""
