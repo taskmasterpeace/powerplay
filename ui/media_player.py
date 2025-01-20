@@ -326,12 +326,13 @@ class MediaPlayerFrame(ttk.LabelFrame):
                 f"{int(total_time//60):02d}:{int(total_time%60):02d}"
             )
             
-            # Update playhead
-            self.playhead_line.set_xdata(current_time)
-            self.canvas.draw_idle()
+            # Update playhead less frequently
+            if (self.current_position % 4096) == 0:  # Only update every 4096 samples
+                self.playhead_line.set_xdata(current_time)
+                self.canvas.draw_idle()
             
-            # Schedule next update
-            self.update_timer_id = self.after(50, self._update_position)
+            # Schedule next update with longer interval
+            self.update_timer_id = self.after(150, self._update_position)  # Changed from 50 to 150ms
             
     def _on_playback_complete(self):
         """Handle playback completion"""
