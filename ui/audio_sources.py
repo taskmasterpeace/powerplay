@@ -141,6 +141,7 @@ class RecordingFrame(ttk.Frame):
         self.app = app
         self.recording = False
         self.transcribing = False
+        self.master.protocol("WM_DELETE_WINDOW", self.on_closing)
         self.current_transcript = ""
         self.markers = []  # Store markers with timestamps
         
@@ -356,12 +357,15 @@ class RecordingFrame(ttk.Frame):
                 print(f"Transcription error: {e}")
         
     def stop_recording(self):
+        """Stop recording and cleanup resources"""
         # Stop processing first
         self.transcribing = False
         self.recording = False
         
-        # Give processing loops time to complete
-        time.sleep(0.5)
+        # Wait for processing thread to complete (with timeout)
+        start_time = time.time()
+        while hasattr(self, 'assemblyai_session') and time.time() - start_time < 2:
+            time.sleep(0.1)
         
         # Stop recording
         audio_data = None
@@ -465,7 +469,7 @@ class RecordingFrame(ttk.Frame):
         self.last_process_time = time.time()
         self.accumulated_text = ""
         
-        while self.recording:
+        while self.recording and hasattr(self, 'assemblyai_session'):
             try:
                 packet = self.assemblyai_session.get_next_transcription()
                 if packet:
@@ -520,3 +524,9 @@ class RecordingFrame(ttk.Frame):
         """Update transcript display with new text"""
         self.transcript_text.insert(tk.END, text)
         self.transcript_text.see(tk.END)
+        
+    def on_closing(self):
+        """Handle window closing"""
+        if self.recording:
+            self.stop_recording()
+        self.master.destroy()
