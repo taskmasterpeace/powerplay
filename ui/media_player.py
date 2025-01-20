@@ -16,6 +16,11 @@ class MediaPlayerFrame(ttk.LabelFrame):
         self.filename_var = tk.StringVar(value="No file loaded")
         self.filename_label = ttk.Label(self, textvariable=self.filename_var)
         self.filename_label.pack(fill=tk.X, padx=5, pady=2)
+        
+        # Initialize playback variables
+        self.update_timer_id = None
+        self.stream = None
+        self.play_thread = None
 
         # Create main container
         self.main_container = ttk.PanedWindow(self, orient=tk.VERTICAL)
@@ -227,50 +232,51 @@ class MediaPlayerFrame(ttk.LabelFrame):
             
         self.transcript_text.tag_config('search', background='yellow')
         
-    def _play_audio_thread(self):
-        """Audio playback thread"""
+    def _start_playback(self):
+        """Initialize and start audio playback"""
         try:
             def callback(outdata, frames, time, status):
                 if not self.playing:
                     raise sd.CallbackStop()
                 
-                # Get data from current position
-                data = self.audio_data[self.current_position:self.current_position + frames]
-                
-                # Check if we've reached the end
-                if len(data) == 0:
-                    self.playing = False
-                    self.after(0, lambda: self.play_button.configure(text="Play"))
+                # Calculate remaining frames
+                remaining = len(self.audio_data) - self.current_position
+                if remaining <= 0:
+                    self.after(0, self._on_playback_complete)
                     raise sd.CallbackStop()
                 
-                # Reshape data if needed
-                if len(data.shape) == 1:
-                    data = data.reshape(-1, 1)
+                # Get chunk of audio data
+                chunk = self.audio_data[self.current_position:self.current_position + frames]
+                frames_to_write = len(chunk)
                 
-                # Write data to output buffer
-                outdata[:len(data)] = data
-                if len(data) < len(outdata):
-                    outdata[len(data):] = 0
+                # Prepare output data
+                if len(chunk.shape) == 1:
+                    chunk = chunk.reshape(-1, 1)
+                outdata[:frames_to_write] = chunk
+                if frames_to_write < len(outdata):
+                    outdata[frames_to_write:] = 0
                 
-                # Update position and UI
-                self.current_position += len(data)
-                self.after(0, self._update_playback_position)
+                # Update position
+                self.current_position += frames_to_write
             
-            # Create and start stream
+            # Clean up existing stream
+            if self.stream:
+                self.stream.stop()
+                self.stream.close()
+            
+            # Create new stream
             self.stream = sd.OutputStream(
                 channels=1,
                 samplerate=self.sample_rate,
                 callback=callback
             )
             
-            with self.stream:
-                sd.sleep(int(((len(self.audio_data) - self.current_position) / self.sample_rate) * 1000))
-                    
+            # Start playback
+            self.stream.start()
+            
         except Exception as e:
-            print(f"Playback error: {str(e)}")
-        finally:
-            self.playing = False
-            self.play_button.configure(text="Play")
+            print(f"Error starting playback: {str(e)}")
+            self._on_playback_complete()
     def _update_playback_position(self):
         """Update slider and time display from the main thread"""
         if not self.playing:
@@ -287,3 +293,32 @@ class MediaPlayerFrame(ttk.LabelFrame):
             f"{int(current_time//60):02d}:{int(current_time%60):02d} / "
             f"{int(total_time//60):02d}:{int(total_time%60):02d}"
         )
+    def _update_position(self):
+        """Update UI elements showing playback position"""
+        if self.playing:
+            # Update slider
+            position_percent = (self.current_position / len(self.audio_data)) * 100
+            self.position_slider.set(position_percent)
+            
+            # Update time display
+            current_time = self.current_position / self.sample_rate
+            total_time = len(self.audio_data) / self.sample_rate
+            self.time_var.set(
+                f"{int(current_time//60):02d}:{int(current_time%60):02d} / "
+                f"{int(total_time//60):02d}:{int(total_time%60):02d}"
+            )
+            
+            # Update playhead
+            self.playhead_line.set_xdata(current_time)
+            self.canvas.draw_idle()
+            
+            # Schedule next update
+            self.update_timer_id = self.after(50, self._update_position)
+            
+    def _on_playback_complete(self):
+        """Handle playback completion"""
+        self.playing = False
+        self.play_button.configure(text="Play")
+        if self.update_timer_id:
+            self.after_cancel(self.update_timer_id)
+            self.update_timer_id = None
