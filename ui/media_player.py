@@ -90,6 +90,7 @@ class MediaPlayerFrame(ttk.LabelFrame):
         self.sample_rate = None
         self.playing = False
         self.paused = False
+        self.paused = False
         self.current_position = 0
         self.stream = None
         self.play_thread = None
@@ -100,15 +101,14 @@ class MediaPlayerFrame(ttk.LabelFrame):
         # Update filename display
         self.filename_var.set(file_path.split('/')[-1].split('\\')[-1])
         try:
-            # Load audio file
-            self.audio_data, self.sample_rate = sf.read(file_path)
+            # Load audio file with float32 dtype
+            self.audio_data, self.sample_rate = sf.read(file_path, dtype='float32')
             
             # Clear previous plot
             self.ax.clear()
             
-            # Plot waveform
+            # Plot waveform using mono for visualization only
             if len(self.audio_data.shape) > 1:
-                # Stereo to mono for visualization
                 audio_mono = np.mean(self.audio_data, axis=1)
             else:
                 audio_mono = self.audio_data
@@ -150,8 +150,9 @@ class MediaPlayerFrame(ttk.LabelFrame):
         if self.audio_data is None:
             return
             
-        if self.playing:
+        if self.playing and not self.paused:
             # Pause playback
+            self.paused = True
             self.playing = False
             self.play_button.configure(text="Play")
             if self.stream:
@@ -159,15 +160,20 @@ class MediaPlayerFrame(ttk.LabelFrame):
             if self.update_timer_id:
                 self.after_cancel(self.update_timer_id)
                 self.update_timer_id = None
+        elif self.paused:
+            # Resume playback
+            self.paused = False
+            self.playing = True
+            self.play_button.configure(text="Pause")
+            if self.stream:
+                self.stream.start()
+            self._update_position()
         else:
             # Start new playback
             self.playing = True
+            self.paused = False
             self.play_button.configure(text="Pause")
-            
-            # Create and start new stream
             self._start_playback()
-            
-            # Start position updates
             self._update_position()
             
     def stop_audio(self):
@@ -240,6 +246,9 @@ class MediaPlayerFrame(ttk.LabelFrame):
         """Initialize and start audio playback"""
         try:
             def callback(outdata, frames, time, status):
+                if status:
+                    print("SoundDevice Callback Status:", status)
+                
                 if not self.playing:
                     raise sd.CallbackStop()
                 
@@ -253,9 +262,10 @@ class MediaPlayerFrame(ttk.LabelFrame):
                 chunk = self.audio_data[self.current_position:self.current_position + frames]
                 frames_to_write = len(chunk)
                 
-                # Prepare output data
+                # Handle stereo vs mono correctly
                 if len(chunk.shape) == 1:
                     chunk = chunk.reshape(-1, 1)
+                
                 outdata[:frames_to_write] = chunk
                 if frames_to_write < len(outdata):
                     outdata[frames_to_write:] = 0
@@ -268,11 +278,15 @@ class MediaPlayerFrame(ttk.LabelFrame):
                 self.stream.stop()
                 self.stream.close()
             
-            # Create new stream
+            # Create new stream with optimized settings
+            channels = 2 if len(self.audio_data.shape) > 1 else 1
             self.stream = sd.OutputStream(
-                channels=1,
+                channels=channels,
                 samplerate=self.sample_rate,
-                callback=callback
+                dtype='float32',
+                callback=callback,
+                blocksize=2048,  # Larger block size for stability
+                latency='low'
             )
             
             # Start playback
