@@ -5,6 +5,7 @@ import platform
 from pathlib import Path
 from typing import Tuple, List, Dict, Optional
 from datetime import datetime, date
+import shutil
 
 class FileStatus:
     """Manages status and metadata for audio files"""
@@ -81,7 +82,7 @@ class FileHandler:
             
     def get_dated_folder(self, base_folder: str) -> str:
         """Get or create a dated folder within the specified base folder"""
-        date_str = datetime.datetime.now().strftime('%y%m%d')
+        date_str = datetime.now().strftime('%y%m%d')
         folder_path = os.path.join(self.folders[base_folder], date_str)
         os.makedirs(folder_path, exist_ok=True)
         return folder_path
@@ -269,20 +270,27 @@ class FileHandler:
         dated_folder = self.get_dated_folder("recordings")
         # Ensure filename follows YYMMDD_HHMM_name convention
         if not re.match(r'^\d{6}_\d{4}_.*$', filename):
-            current_time = datetime.datetime.now()
+            current_time = datetime.now()
             filename = f"{current_time.strftime('%y%m%d_%H%M')}_{filename}"
         
         output_path = os.path.join(dated_folder, f"{filename}.mp3")
         
-        # Save audio file
-        with open(output_path, 'wb') as f:
-            f.write(audio_data)
+        try:
+            # Ensure directory exists
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
             
-        # Save metadata if provided
-        if metadata:
-            metadata_path = output_path.replace('.mp3', '_metadata.json')
-            with open(metadata_path, 'w', encoding='utf-8') as f:
-                import json  # Add import at top of file if needed
-                json.dump(metadata, f, indent=2)
+            # Save audio file
+            with open(output_path, 'wb') as f:
+                f.write(audio_data)
+                
+            # Save metadata if provided
+            if metadata:
+                metadata_path = output_path.replace('.mp3', '_metadata.json')
+                with open(metadata_path, 'w', encoding='utf-8') as f:
+                    json.dump(metadata, f, indent=2)
+                
+            return output_path
             
-        return output_path
+        except Exception as e:
+            print(f"Error saving recording: {str(e)}")
+            return None
