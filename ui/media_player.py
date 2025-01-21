@@ -255,34 +255,21 @@ class MediaPlayerFrame(ttk.LabelFrame):
             if audio_data is None or len(audio_data) == 0:
                 return np.zeros(self.max_waveform_points)
 
-            # Convert to numpy array if not already and ensure float type
-            audio_data = np.array(audio_data, dtype=np.float64)
+            # Convert to numpy array and ensure float type
+            audio_data = np.array(audio_data, dtype=np.float32)
             audio_data = np.nan_to_num(audio_data, nan=0.0)
             
-            # Early check for all-zero or very small data
+            # Check for valid data
             max_abs_val = np.max(np.abs(audio_data))
             if max_abs_val < 1e-10:
                 return np.zeros(self.max_waveform_points)
 
-            # Safe normalization
-            audio_data = audio_data / max_abs_val if max_abs_val > 0 else audio_data
-                
+            # Efficient downsampling using block reduction
             if len(audio_data) > self.max_waveform_points:
-                try:
-                    # Calculate reduction factor
-                    reduction = max(1, len(audio_data) // self.max_waveform_points)
-                    
-                    # Ensure we don't exceed array bounds
-                    valid_length = (len(audio_data) // reduction) * reduction
-                    audio_data = audio_data[:valid_length]
-                    
-                    # Reshape and take mean of chunks
-                    audio_data = audio_data.reshape(-1, reduction)
-                    audio_data = np.mean(audio_data, axis=1)
-                except ValueError as e:
-                    print(f"Reshape error: {e}, falling back to decimation")
-                    # Fallback to simple decimation
-                    audio_data = audio_data[::reduction]
+                block_size = len(audio_data) // self.max_waveform_points
+                audio_data = audio_data[:block_size * self.max_waveform_points]
+                audio_data = audio_data.reshape(-1, block_size)
+                audio_data = np.max(np.abs(audio_data), axis=1)
                 
             # Final safety checks
             audio_data = np.clip(audio_data, -1.0, 1.0)
@@ -343,12 +330,17 @@ class MediaPlayerFrame(ttk.LabelFrame):
                 self.after_cancel(self.update_id)
         else:
             try:
-                self.audio_player.play()
-                self.play_button.configure(text="Pause")
-                self.start_playback_updates()
+                # Start playback in a separate thread
+                threading.Thread(target=self._play_audio_thread, daemon=True).start()
             except Exception as e:
                 print(f"Error playing audio: {e}")
                 messagebox.showerror("Playback Error", str(e))
+
+    def _play_audio_thread(self):
+        """Handle audio playback in a separate thread"""
+        self.audio_player.play()
+        self.after(0, lambda: self.play_button.configure(text="Pause"))
+        self.after(0, self.start_playback_updates)
             
     def stop_audio(self):
         """Stop audio playback"""
@@ -430,10 +422,10 @@ class MediaPlayerFrame(ttk.LabelFrame):
                 else:
                     self.update_time_display()
                     self.update_playhead()
-                    self.update_id = self.after(50, update)
+                    self.update_id = self.after(100, update)  # Reduced update frequency
             else:
                 self.play_button.configure(text="Play")
-        self.update_id = self.after(50, update)
+        self.update_id = self.after(100, update)  # Start with reduced frequency
 
     def update_time_display(self):
         """Update time labels and slider"""
