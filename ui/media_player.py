@@ -283,7 +283,7 @@ class MediaPlayerFrame(ttk.LabelFrame):
     def start_playback_updates(self):
         """Start updating playback position"""
         def update():
-            if self.playing:
+            if self.audio_player.is_playing():
                 self.current_position = self.audio_player.get_position()
                 if self.current_position >= self.duration:
                     self.stop_audio()
@@ -295,7 +295,9 @@ class MediaPlayerFrame(ttk.LabelFrame):
                     self.update_id = self.after(50, update)
             else:
                 self.play_button.configure(text="Play")
+                self.cancel_updates()
                 
+        self.cancel_updates()  # Clear any existing updates
         self.update_id = self.after(50, update)
 
     def update_time_display(self):
@@ -319,6 +321,12 @@ class MediaPlayerFrame(ttk.LabelFrame):
             self.after_cancel(self.update_timer_id)
             self.update_timer_id = None
             
+    def cancel_updates(self):
+        """Cancel any pending updates"""
+        if self.update_id:
+            self.after_cancel(self.update_id)
+            self.update_id = None
+
     def destroy(self):
         """Cleanup resources before destroying widget"""
         if self.audio_player:
