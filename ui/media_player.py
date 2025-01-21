@@ -324,23 +324,33 @@ class MediaPlayerFrame(ttk.LabelFrame):
             return
             
         if self.audio_player.is_playing():
+            print("Pausing playback")
             self.audio_player.pause()
             self.play_button.configure(text="Play")
             if self.update_id:
                 self.after_cancel(self.update_id)
+                self.update_id = None
         else:
+            print("Starting playback")
             try:
                 # Start playback in a separate thread
+                self.playing = True  # Set playing state
                 threading.Thread(target=self._play_audio_thread, daemon=True).start()
             except Exception as e:
+                self.playing = False
                 print(f"Error playing audio: {e}")
                 messagebox.showerror("Playback Error", str(e))
 
     def _play_audio_thread(self):
         """Handle audio playback in a separate thread"""
-        self.audio_player.play()
-        self.after(0, lambda: self.play_button.configure(text="Pause"))
-        self.after(0, self.start_playback_updates)
+        try:
+            print("Playing audio in thread")
+            self.audio_player.play()
+            self.after(0, lambda: self.play_button.configure(text="Pause"))
+            self.after(0, self.start_playback_updates)
+        except Exception as e:
+            print(f"Error in playback thread: {e}")
+            self.after(0, lambda: messagebox.showerror("Playback Error", str(e)))
             
     def stop_audio(self):
         """Stop audio playback"""
@@ -441,8 +451,9 @@ class MediaPlayerFrame(ttk.LabelFrame):
 
     def update_playhead(self):
         """Update waveform playhead position"""
-        self.playhead_line.set_xdata(self.current_position)
-        self.canvas.draw_idle()
+        if hasattr(self, 'playhead_line'):
+            self.playhead_line.set_xdata(self.current_position)
+            self.canvas.draw_idle()
     
             
     def _on_playback_complete(self):
