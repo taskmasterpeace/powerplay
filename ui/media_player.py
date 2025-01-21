@@ -212,8 +212,8 @@ class MediaPlayerFrame(ttk.LabelFrame):
             
             # Load audio for playback
             try:
-                mixer.music.load(file_path)
-                self.duration = mixer.Sound(file_path).get_length()
+                self.audio_player.load(file_path)
+                self.duration = self.audio_player.duration
             except Exception as e:
                 print(f"Error loading audio for playback: {e}")
                 raise
