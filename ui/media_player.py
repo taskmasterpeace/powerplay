@@ -266,20 +266,24 @@ class MediaPlayerFrame(ttk.LabelFrame):
             # Replace any invalid values
             audio_data = np.nan_to_num(audio_data, nan=0.0, posinf=1.0, neginf=-1.0)
             
-            # Early check for all-zero data
-            if np.all(audio_data == 0):
-                print("Warning: All-zero audio data")
+            # Early check for all-zero or very small data
+            max_abs_val = np.max(np.abs(audio_data))
+            if max_abs_val < 1e-10:  # Check if essentially zero
+                print("Warning: Audio data is too quiet or empty")
                 return np.zeros(self.max_waveform_points)
+
+            # Normalize amplitude first since we know we have valid data
+            audio_data = audio_data / max_abs_val
                 
             if len(audio_data) > self.max_waveform_points:
-                # Calculate reduction factor
-                reduction = max(1, len(audio_data) // self.max_waveform_points)
-                
-                # Ensure we don't exceed array bounds
-                valid_length = (len(audio_data) // reduction) * reduction
-                audio_data = audio_data[:valid_length]
-                
                 try:
+                    # Calculate reduction factor
+                    reduction = max(1, len(audio_data) // self.max_waveform_points)
+                    
+                    # Ensure we don't exceed array bounds
+                    valid_length = (len(audio_data) // reduction) * reduction
+                    audio_data = audio_data[:valid_length]
+                    
                     # Reshape and take mean of chunks
                     audio_data = audio_data.reshape(-1, reduction)
                     audio_data = np.mean(audio_data, axis=1)
@@ -287,14 +291,6 @@ class MediaPlayerFrame(ttk.LabelFrame):
                     print(f"Reshape error: {e}, falling back to decimation")
                     # Fallback to simple decimation
                     audio_data = audio_data[::reduction]
-            
-            # Normalize amplitude with additional safety checks
-            abs_max = np.max(np.abs(audio_data))
-            if abs_max > 1e-10:  # Use small epsilon instead of zero
-                audio_data = audio_data / abs_max
-            else:
-                print("Warning: Very low amplitude audio")
-                return np.zeros(len(audio_data))
                 
             # Final safety checks
             audio_data = np.clip(audio_data, -1.0, 1.0)
