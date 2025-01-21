@@ -25,25 +25,43 @@ class AudioPlayer:
 
     def play(self):
         """Play or resume playback."""
-        if self.audio_segment:
-            # Calculate the audio segment to play outside the lock
+        if not self.audio_segment:
+            return False
+            
+        with self.lock:
+            if self.playing:
+                return False
+                
             start_ms = int(self.paused_position * 1000)
             audio_to_play = self.audio_segment[start_ms:]
-            with self.lock:
-                if self.playback and not self.playback.is_playing():
-                    self.playback = None
-                if not self.playback:
-                    self.playback = _play_with_simpleaudio(audio_to_play)
-                    self.start_time = time.time() - self.paused_position
-                    self.playing = True
+            
+            try:
+                if self.playback:
+                    self.playback.stop()
+                self.playback = _play_with_simpleaudio(audio_to_play)
+                self.start_time = time.time() - self.paused_position
+                self.playing = True
+                return True
+            except Exception as e:
+                print(f"Playback error: {e}")
+                self.playing = False
+                return False
 
     def pause(self):
         """Pause playback."""
-        if self.playback and self.playback.is_playing():
-            with self.lock:
-                self.playback.stop()
+        with self.lock:
+            if not self.playing:
+                return False
+                
+            try:
+                if self.playback:
+                    self.playback.stop()
                 self.paused_position = self.get_position()
                 self.playing = False
+                return True
+            except Exception as e:
+                print(f"Pause error: {e}")
+                return False
 
     def stop(self):
         """Stop playback and reset position."""
@@ -208,29 +226,22 @@ class MediaPlayerFrame(ttk.LabelFrame):
             return
             
         if self.audio_player.is_playing():
-            self.audio_player.pause()
-            self.play_button.configure(text="Play")
-            if self.update_id:
-                self.after_cancel(self.update_id)
-                self.update_id = None
+            if self.audio_player.pause():
+                self.play_button.configure(text="Play")
+                self.cancel_updates()
         else:
-            try:
-                # Submit the play task to the executor to run in background
-                self.executor.submit(self._play_audio_thread)
-            except Exception as e:
-                print(f"Error playing audio: {e}")
-                messagebox.showerror("Playback Error", str(e))
+            def play_task():
+                if self.audio_player.play():
+                    self.master.after(0, lambda: self.play_button.configure(text="Pause"))
+                    self.master.after(0, self.start_playback_updates)
+                else:
+                    self.master.after(0, lambda: messagebox.showerror(
+                        "Playback Error", 
+                        "Failed to start playback"
+                    ))
+            
+            self.executor.submit(play_task)
 
-    def _play_audio_thread(self):
-        """Handle audio playback in a background thread."""
-        try:
-            self.audio_player.play()
-            # Schedule UI updates on the main thread
-            self.master.after(0, lambda: self.play_button.configure(text="Pause"))
-            self.master.after(0, self.start_playback_updates)
-        except Exception as e:
-            error_msg = str(e)
-            self.master.after(0, lambda: messagebox.showerror("Playback Error", error_msg))
             
     def stop_audio(self):
         """Stop audio playback"""
