@@ -105,10 +105,6 @@ class MediaPlayerFrame(ttk.LabelFrame):
         self.top_frame = ttk.Frame(self.main_container)
         self.main_container.add(self.top_frame, weight=1)
         
-        # Create a simple progress bar instead of waveform
-        self.progress_bar = ttk.Progressbar(self.top_frame, mode='determinate')
-        self.progress_bar.pack(fill=tk.X, expand=True, padx=5, pady=5)
-        
         # Playback controls
         self.controls_frame = ttk.Frame(self.top_frame)
         self.controls_frame.pack(fill=tk.X, pady=5)
@@ -157,9 +153,6 @@ class MediaPlayerFrame(ttk.LabelFrame):
         
         # Audio playback state
         self.audio_file = None
-        self.playing = False
-        self.paused = False
-        self.duration = 0
         self.current_position = 0
         self.update_id = None
 
@@ -192,7 +185,6 @@ class MediaPlayerFrame(ttk.LabelFrame):
                 
             self.filename_var.set(os.path.basename(file_path))
             self.position_slider.set(0)
-            self.progress_bar['value'] = 0
             self.time_var.set(f"00:00 / {int(self.duration//60):02d}:{int(self.duration%60):02d}")
             
         except Exception as e:
@@ -215,22 +207,17 @@ class MediaPlayerFrame(ttk.LabelFrame):
             return
             
         if self.audio_player.is_playing():
-            print("Pausing playback")
             self.audio_player.pause()
-            self.playing = False
             self.play_button.configure(text="Play")
             if self.update_id:
                 self.after_cancel(self.update_id)
                 self.update_id = None
         else:
-            print("Starting playback")
             try:
-                self.playing = True
                 self.audio_player.play()
                 self.play_button.configure(text="Pause")
                 self.start_playback_updates()
             except Exception as e:
-                self.playing = False
                 print(f"Error playing audio: {e}")
                 messagebox.showerror("Playback Error", str(e))
 
@@ -302,9 +289,9 @@ class MediaPlayerFrame(ttk.LabelFrame):
                     self.stop_audio()
                 else:
                     self.update_time_display()
-                    # Update progress bar
+                    # Update position slider
                     progress = (self.current_position / self.duration) * 100
-                    self.progress_bar['value'] = progress
+                    self.position_slider.set(progress)
                     self.update_id = self.after(50, update)
             else:
                 self.play_button.configure(text="Play")
