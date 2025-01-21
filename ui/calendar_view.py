@@ -147,9 +147,17 @@ class CalendarView(ttk.Frame):
         self.all_files_listbox.bind('<<ListboxSelect>>', self.on_all_files_select)
         self.all_files_listbox.bind('<Double-Button-1>', self.on_all_files_double_click)
         
-        # Bind file selection and double-click
+        # Bind file selection, double-click and right-click
         self.file_listbox.bind('<<ListboxSelect>>', self.on_file_select)
         self.file_listbox.bind('<Double-Button-1>', self.on_file_double_click)
+        self.file_listbox.bind('<Button-3>', self.show_context_menu)
+        
+        # Create context menu
+        self.context_menu = tk.Menu(self, tearoff=0)
+        self.context_menu.add_command(label="Play in Media Player", command=self.play_in_media_player)
+        self.context_menu.add_command(label="Go to Date", command=self.go_to_date)
+        self.context_menu.add_separator()
+        self.context_menu.add_command(label="View Transcript", command=self.view_transcript)
         
         # Transcription controls
         self.control_frame = ttk.Frame(self.right_frame)
@@ -482,6 +490,58 @@ class CalendarView(ttk.Frame):
                 status.update_status(has_transcript=has_transcript)
                 
         return self.file_statuses[file_path].metadata["status"]
+        
+    def show_context_menu(self, event):
+        """Show context menu on right click"""
+        try:
+            selection = self.file_listbox.curselection()
+            if selection:
+                self.context_menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            self.context_menu.grab_release()
+            
+    def play_in_media_player(self):
+        """Load selected file in media player and switch to that tab"""
+        selection = self.file_listbox.curselection()
+        if not selection:
+            return
+            
+        item_text = self.file_listbox.get(selection[0])
+        clean_text = item_text.lstrip("🎵 ").lstrip("📝 ")
+        date_str = clean_text.split(": ")[0]
+        file_name = clean_text.split(": ")[1]
+        
+        if date_str in self.audio_files:
+            file_path = next((fp for fp in self.audio_files[date_str] 
+                            if os.path.basename(fp) == file_name), None)
+            if file_path:
+                # Load audio and transcript in media player and switch to media player tab
+                self.app.main_window.media_player.load_audio(file_path)
+                if self.app.file_handler.check_transcript_exists(file_path):
+                    transcript_path = os.path.splitext(file_path)[0] + '_transcript.txt'
+                    self.app.main_window.media_player.load_transcript(transcript_path)
+                self.app.main_window.notebook.select(self.app.main_window.media_player)
+                
+    def go_to_date(self):
+        """Navigate to the date of the selected file"""
+        selection = self.file_listbox.curselection()
+        if not selection:
+            return
+            
+        item_text = self.file_listbox.get(selection[0])
+        clean_text = item_text.lstrip("🎵 ").lstrip("📝 ")
+        date_str = clean_text.split(": ")[0]
+        
+        # Switch to date view tab
+        self.file_notebook.select(0)
+        
+        # Jump to date in calendar
+        file_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        self.calendar.selection_set(file_date)
+        self.calendar.see(file_date)
+        
+        # Update file list for selected date
+        self.on_date_select(None)
         
     def view_transcript(self):
         """View transcript for selected file and switch to calendar view"""
