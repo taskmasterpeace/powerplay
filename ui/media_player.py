@@ -177,19 +177,9 @@ class MediaPlayerFrame(ttk.LabelFrame):
         """Entry point for loading audio"""
         self.audio_file = file_path
         self.filename_var.set("Loading...")
-        self.show_loading_progress()
         
         # Start async loading
         self.master.after(50, self.load_audio_async, file_path)
-        
-    def show_loading_progress(self):
-        """Show loading progress in the waveform area"""
-        # Clear previous plot
-        self.ax.clear()
-        self.ax.text(0.5, 0.5, 'Loading...', 
-                    horizontalalignment='center',
-                    verticalalignment='center')
-        self.canvas.draw()
         
     def load_audio_async(self, file_path):
         """Load audio file asynchronously"""
@@ -263,7 +253,6 @@ class MediaPlayerFrame(ttk.LabelFrame):
         self.current_position = 0
         self.position_slider.set(0)
         self.update_time_display()
-        self.update_playhead()
         if self.update_id:
             self.after_cancel(self.update_id)
         
@@ -280,7 +269,6 @@ class MediaPlayerFrame(ttk.LabelFrame):
             position = (float(value) / 100) * self.duration
             self.audio_player.seek(position)
             self.current_position = position
-            self.update_playhead()
             
             
     def search_transcript(self):
@@ -335,12 +323,6 @@ class MediaPlayerFrame(ttk.LabelFrame):
         self.time_var.set(f"{current_time} / {total_time}")
         self.position_slider.set((self.current_position / self.duration) * 100)
 
-    def update_playhead(self):
-        """Update waveform playhead position"""
-        if hasattr(self, 'playhead_line'):
-            self.playhead_line.set_xdata(self.current_position)
-            self.canvas.draw_idle()
-    
             
     def _on_playback_complete(self):
         """Handle playback completion"""
