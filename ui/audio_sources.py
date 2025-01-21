@@ -175,6 +175,7 @@ class RecordingFrame(ttk.Frame):
         
         # Bind F12 for instant processing
         self.master.bind('<F12>', self.trigger_instant_processing)
+        self.bind_all('<F12>', self.trigger_instant_processing)  # Bind to all widgets
         
         # Meeting Name
         ttk.Label(self.config_frame, text="Meeting Name:").pack(pady=2)
@@ -483,16 +484,33 @@ class RecordingFrame(ttk.Frame):
         
     def trigger_instant_processing(self, event=None):
         """Handle F12 key press for instant processing"""
-        if self.recording and hasattr(self, 'accumulated_text'):
-            # Force immediate processing
-            current_time = time.time()
-            if self.accumulated_text.strip():
-                self.process_text_chunk(self.accumulated_text)
-                self.accumulated_text = ""
-                self.last_process_time = current_time
-                # Reset the visual indicator
-                self.dual_indicator.update(0, self.recorder.get_audio_level() * 100, 
-                                        self.get_current_interval())
+        print("F12 pressed - triggering instant processing")  # Debug print
+        if not self.recording:
+            print("Not recording, ignoring F12")  # Debug print
+            return
+            
+        if not hasattr(self, 'accumulated_text'):
+            print("No accumulated text found")  # Debug print
+            return
+            
+        # Force immediate processing
+        current_time = time.time()
+        text_to_process = self.accumulated_text.strip()
+        
+        if text_to_process:
+            print(f"Processing chunk: {text_to_process}")  # Debug print
+            self.process_text_chunk(text_to_process)
+            self.accumulated_text = ""
+            self.last_process_time = current_time
+            
+            # Reset the visual indicator
+            audio_level = self.recorder.get_audio_level() * 100 if hasattr(self, 'recorder') else 0
+            self.dual_indicator.update(0, audio_level, self.get_current_interval())
+            
+            # Force UI update
+            self.update()
+        else:
+            print("No text to process")  # Debug print
             
     def process_text_chunk(self, text):
         """
@@ -500,11 +518,20 @@ class RecordingFrame(ttk.Frame):
         Currently just displays in response window
         Future: Will integrate with LLM processing
         """
-        if text.strip():  # Only process non-empty text
-            self.response_text.insert(tk.END, 
-                f"\n\n=== New Chunk ({datetime.now().strftime('%H:%M:%S')}) ===\n")
+        if not text or not text.strip():
+            print("Empty text chunk, skipping processing")  # Debug print
+            return
+            
+        timestamp = datetime.now().strftime('%H:%M:%S')
+        chunk_header = f"\n\n=== New Chunk ({timestamp}) ===\n"
+        
+        try:
+            self.response_text.insert(tk.END, chunk_header)
             self.response_text.insert(tk.END, text)
             self.response_text.see(tk.END)
+            print(f"Processed chunk at {timestamp}")  # Debug print
+        except Exception as e:
+            print(f"Error processing text chunk: {e}")  # Debug print
             
     def process_transcriptions(self):
         """Process incoming transcriptions with interval-based chunking"""
