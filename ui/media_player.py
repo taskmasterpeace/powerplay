@@ -264,9 +264,13 @@ class MediaPlayerFrame(ttk.LabelFrame):
                 # Reshape and take mean of chunks
                 audio_data = audio_data.reshape(-1, reduction).mean(axis=1)
             
-            # Normalize amplitude
-            if np.any(audio_data):  # Prevent division by zero
-                audio_data = audio_data / np.max(np.abs(audio_data))
+            # Normalize amplitude with additional safety checks
+            max_val = np.max(np.abs(audio_data))
+            if max_val > 0:  # Only normalize if we have non-zero values
+                audio_data = audio_data / max_val
+            else:
+                # Return zero array of correct length if all values are zero
+                audio_data = np.zeros_like(audio_data)
                 
             return audio_data
             
