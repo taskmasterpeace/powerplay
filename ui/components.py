@@ -4,8 +4,7 @@ import datetime
 import os
 import platform
 import subprocess
-
-import os
+import numpy as np
 from dotenv import load_dotenv
 
 class DualPurposeIndicator(tk.Canvas):
