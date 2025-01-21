@@ -145,6 +145,7 @@ class CalendarView(ttk.Frame):
         
         # Bind events for all files list
         self.all_files_listbox.bind('<<ListboxSelect>>', self.on_all_files_select)
+        self.all_files_listbox.bind('<Button-3>', self.show_context_menu)
         
         # Bind file selection and right-click
         self.file_listbox.bind('<<ListboxSelect>>', self.on_file_select)
@@ -432,19 +433,27 @@ class CalendarView(ttk.Frame):
     def show_context_menu(self, event):
         """Show context menu on right click"""
         try:
-            selection = self.file_listbox.curselection()
-            if selection:
-                self.context_menu.tk_popup(event.x_root, event.y_root)
+            # Determine which listbox was clicked
+            widget = event.widget
+            if widget == self.file_listbox or widget == self.all_files_listbox:
+                selection = widget.curselection()
+                if selection:
+                    self.context_menu.tk_popup(event.x_root, event.y_root)
         finally:
             self.context_menu.grab_release()
             
     def play_in_media_player(self):
         """Load selected file in media player and switch to that tab"""
-        selection = self.file_listbox.curselection()
+        # Check both listboxes for selection
+        selection = self.file_listbox.curselection() or self.all_files_listbox.curselection()
         if not selection:
             return
             
-        item_text = self.file_listbox.get(selection[0])
+        # Get text from whichever listbox has the selection
+        if self.file_listbox.curselection():
+            item_text = self.file_listbox.get(selection[0])
+        else:
+            item_text = self.all_files_listbox.get(selection[0])
         clean_text = item_text.lstrip("🎵 ").lstrip("📝 ")
         date_str = clean_text.split(": ")[0]
         file_name = clean_text.split(": ")[1]
@@ -462,11 +471,16 @@ class CalendarView(ttk.Frame):
                 
     def go_to_date(self):
         """Navigate to the date of the selected file"""
-        selection = self.file_listbox.curselection()
+        # Check both listboxes for selection
+        selection = self.file_listbox.curselection() or self.all_files_listbox.curselection()
         if not selection:
             return
             
-        item_text = self.file_listbox.get(selection[0])
+        # Get text from whichever listbox has the selection
+        if self.file_listbox.curselection():
+            item_text = self.file_listbox.get(selection[0])
+        else:
+            item_text = self.all_files_listbox.get(selection[0])
         clean_text = item_text.lstrip("🎵 ").lstrip("📝 ")
         date_str = clean_text.split(": ")[0]
         
@@ -483,12 +497,17 @@ class CalendarView(ttk.Frame):
         
     def view_transcript(self):
         """View transcript for selected file and switch to calendar view"""
-        selection = self.file_listbox.curselection()
+        # Check both listboxes for selection
+        selection = self.file_listbox.curselection() or self.all_files_listbox.curselection()
         if not selection:
             messagebox.showwarning("Warning", "Please select a file to view")
             return
             
-        item_text = self.file_listbox.get(selection[0])
+        # Get text from whichever listbox has the selection
+        if self.file_listbox.curselection():
+            item_text = self.file_listbox.get(selection[0])
+        else:
+            item_text = self.all_files_listbox.get(selection[0])
         # Extract date from item text (format: "YYYY-MM-DD: filename")
         date_str, file_name = item_text.split(": ", 1)
         
