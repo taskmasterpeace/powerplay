@@ -68,11 +68,10 @@ class AudioPlayer:
                     with self.stream:
                         while self.playing:
                             sd.sleep(50)
-                        
-            except Exception as e:
-                print(f"Audio thread error: {e}")
-                self.queue.put(("error", str(e)))
-                
+                            
+                except Exception as e:
+                    print(f"Audio thread error: {e}")
+                    self.queue.put(("error", str(e)))
         threading.Thread(target=audio_thread, daemon=True).start()
     
     def seek(self, position):
