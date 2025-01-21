@@ -349,8 +349,9 @@ class MediaPlayerFrame(ttk.LabelFrame):
             self.after(0, lambda: self.play_button.configure(text="Pause"))
             self.after(0, self.start_playback_updates)
         except Exception as e:
-            print(f"Error in playback thread: {e}")
-            self.after(0, lambda: messagebox.showerror("Playback Error", str(e)))
+            error_msg = str(e)
+            print(f"Error in playback thread: {error_msg}")
+            self.after(0, lambda: messagebox.showerror("Playback Error", error_msg))
             
     def stop_audio(self):
         """Stop audio playback"""
