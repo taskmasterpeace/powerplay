@@ -201,22 +201,18 @@ class MediaPlayerFrame(ttk.LabelFrame):
     def load_audio_async(self, file_path):
         """Load audio file asynchronously"""
         try:
-            # Load waveform data in chunks
+            # Load audio for playback first
+            self.audio_player.load(file_path)
+            self.duration = self.audio_player.duration
+            
+            # Validate duration
+            if self.duration <= 0:
+                raise ValueError("Invalid audio duration (<= 0 seconds)")
+                
+            # Load waveform data
             audio_data = self.load_waveform(file_path)
-            
-            # Downsample for visualization
             display_data = self.prepare_waveform_data(audio_data)
-            
-            # Update waveform display
             self.plot_waveform(display_data)
-            
-            # Load audio for playback
-            try:
-                self.audio_player.load(file_path)
-                self.duration = self.audio_player.duration
-            except Exception as e:
-                print(f"Error loading audio for playback: {e}")
-                raise
             
             # Update UI
             self.filename_var.set(os.path.basename(file_path))
@@ -231,6 +227,11 @@ class MediaPlayerFrame(ttk.LabelFrame):
         """Load waveform data from audio file"""
         try:
             audio_segment = AudioSegment.from_file(file_path)
+            
+            # Validate audio content
+            if len(audio_segment) == 0:
+                raise ValueError("Empty audio file")
+                
             samples = np.array(audio_segment.get_array_of_samples())
             
             # Convert to mono if stereo
@@ -252,27 +253,19 @@ class MediaPlayerFrame(ttk.LabelFrame):
         """Downsample audio data for visualization with safety checks"""
         try:
             if audio_data is None or len(audio_data) == 0:
-                print("Warning: Empty audio data")
                 return np.zeros(self.max_waveform_points)
 
             # Convert to numpy array if not already and ensure float type
             audio_data = np.array(audio_data, dtype=np.float64)
-            
-            # Replace any invalid values
-            audio_data = np.nan_to_num(audio_data, nan=0.0, posinf=1.0, neginf=-1.0)
+            audio_data = np.nan_to_num(audio_data, nan=0.0)
             
             # Early check for all-zero or very small data
             max_abs_val = np.max(np.abs(audio_data))
-            if max_abs_val < 1e-10:  # Check if essentially zero
-                print("Warning: Audio data is too quiet or empty")
+            if max_abs_val < 1e-10:
                 return np.zeros(self.max_waveform_points)
 
-            # Normalize amplitude with safety check
-            if max_abs_val > 0:
-                audio_data = audio_data / max_abs_val
-            else:
-                print("Warning: Cannot normalize zero-amplitude audio data")
-                return np.zeros(self.max_waveform_points)
+            # Safe normalization
+            audio_data = audio_data / max_abs_val if max_abs_val > 0 else audio_data
                 
             if len(audio_data) > self.max_waveform_points:
                 try:
@@ -311,18 +304,21 @@ class MediaPlayerFrame(ttk.LabelFrame):
         """Plot the waveform visualization"""
         self.ax.clear()
         
-        time_axis = np.arange(len(audio_data)) / (len(audio_data) / self.duration)
+        # Handle invalid duration
+        if self.duration <= 0 or len(audio_data) == 0:
+            self.ax.text(0.5, 0.5, 'Invalid audio file', 
+                        horizontalalignment='center',
+                        verticalalignment='center')
+            self.canvas.draw()
+            return
+        
+        time_axis = np.linspace(0, self.duration, len(audio_data))  # Safer calculation
         self.ax.plot(time_axis, audio_data, color='blue', alpha=0.5)
         self.ax.set_xlabel('Time (s)')
         self.ax.set_ylabel('Amplitude')
         
-        # Re-add playhead line
         self.playhead_line = self.ax.axvline(x=0, color='red', linewidth=1, zorder=10)
-        
-        # Adjust plot layout
         self.fig.tight_layout()
-        
-        # Update canvas
         self.canvas.draw()
             
     def load_transcript(self, transcript_path):
@@ -441,10 +437,14 @@ class MediaPlayerFrame(ttk.LabelFrame):
 
     def update_time_display(self):
         """Update time labels and slider"""
-        self.time_var.set(
-            f"{int(self.current_position//60):02d}:{int(self.current_position%60):02d} / "
-            f"{int(self.duration//60):02d}:{int(self.duration%60):02d}"
-        )
+        if self.duration <= 0:
+            self.time_var.set("00:00 / 00:00")
+            self.position_slider.set(0)
+            return
+        
+        current_time = f"{int(self.current_position//60):02d}:{int(self.current_position%60):02d}"
+        total_time = f"{int(self.duration//60):02d}:{int(self.duration%60):02d}"
+        self.time_var.set(f"{current_time} / {total_time}")
         self.position_slider.set((self.current_position / self.duration) * 100)
 
     def update_playhead(self):
