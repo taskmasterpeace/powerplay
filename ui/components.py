@@ -23,18 +23,19 @@ class DualPurposeIndicator(tk.Canvas):
         self.create_text(size//2, size//2, text="0", tags="countdown_text", 
                         font=("Arial", int(size/4)))
     
-    def update(self, chunk_progress, audio_level):
+    def update(self, chunk_progress, audio_level, seconds_remaining):
         """
         Update both visualizations
         chunk_progress: 0-100 for countdown
         audio_level: 0-100 for audio level
+        seconds_remaining: actual seconds remaining
         """
         self.chunk_progress = chunk_progress
         self.audio_level = audio_level
         
         # Update outer progress arc (chunk timer)
         self.delete("progress_arc")
-        angle = int(360 * (self.chunk_progress / 100))
+        angle = int(360 * (chunk_progress / 100))
         self.create_arc(5, 5, self.size-5, self.size-5, 
                        start=0, extent=angle, 
                        tags="progress_arc", 
@@ -42,19 +43,18 @@ class DualPurposeIndicator(tk.Canvas):
         
         # Update inner circle (audio level)
         self.delete("audio_circle")
-        radius = (self.audio_level / 100) * (self.size/4)
+        radius = (audio_level / 100) * (self.size/4)
         center = self.size/2
-        color = self._get_audio_color(self.audio_level)
+        color = self._get_audio_color(audio_level)
         self.create_oval(center-radius, center-radius,
                         center+radius, center+radius,
                         tags="audio_circle", 
                         fill=color)
         
-        # Update countdown text
+        # Update countdown text with actual seconds
         self.delete("countdown_text")
-        remaining = int((100 - self.chunk_progress) / 10)  # Simplified countdown
         self.create_text(self.size//2, self.size//2, 
-                        text=str(remaining),
+                        text=str(int(seconds_remaining)),
                         tags="countdown_text",
                         font=("Arial", int(self.size/4)))
     
