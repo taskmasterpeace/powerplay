@@ -8,6 +8,7 @@ import pyaudio
 from pydub import AudioSegment
 from utils.audio_recorder import AudioRecorder
 from services.assemblyai_realtime import AssemblyAIRealTimeTranscription
+from ui.components import DualPurposeIndicator
 
 class AudioSourceFrame(ttk.LabelFrame):
     def __init__(self, master, app):
@@ -205,6 +206,10 @@ class RecordingFrame(ttk.Frame):
         )
         self.record_btn.pack(side=tk.LEFT, padx=5)
         
+        # Add dual-purpose indicator
+        self.dual_indicator = DualPurposeIndicator(self.controls_frame)
+        self.dual_indicator.pack(side=tk.LEFT, padx=5)
+        
         self.time_label = ttk.Label(self.controls_frame, text="00:00")
         self.time_label.pack(side=tk.LEFT, padx=5)
         
@@ -344,6 +349,9 @@ class RecordingFrame(ttk.Frame):
             self.recorder.start(callback=self.process_audio_chunk)
             threading.Thread(target=self.process_transcriptions, daemon=True).start()
             
+            # Start indicator updates
+            self.update_dual_indicator()
+            
         except Exception as e:
             messagebox.showerror("Error", f"Failed to start recording: {str(e)}")
             self.stop_recording()
@@ -428,6 +436,29 @@ class RecordingFrame(ttk.Frame):
             seconds = elapsed % 60
             self.time_label.configure(text=f"{minutes:02d}:{seconds:02d}")
             self.after(1000, self.update_timer)
+            
+    def update_dual_indicator(self):
+        """Update the dual-purpose indicator during recording"""
+        if self.recording:
+            # Calculate chunk progress
+            interval = self.get_current_interval()
+            if interval != float('inf'):
+                elapsed = time.time() - self.last_process_time
+                chunk_progress = min((elapsed / interval) * 100, 100)
+            else:
+                chunk_progress = 0
+            
+            # Get audio level from recorder
+            if hasattr(self, 'recorder'):
+                audio_level = self.recorder.get_audio_level() * 100  # Scale to 0-100
+            else:
+                audio_level = 0
+            
+            # Update the indicator
+            self.dual_indicator.update(chunk_progress, audio_level)
+            
+            # Schedule next update
+            self.after(50, self.update_dual_indicator)
             
     def get_current_interval(self):
         """Convert interval string to seconds"""
