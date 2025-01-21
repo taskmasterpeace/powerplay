@@ -8,6 +8,66 @@ import subprocess
 import os
 from dotenv import load_dotenv
 
+class DualPurposeIndicator(tk.Canvas):
+    def __init__(self, master, size=60):
+        super().__init__(master, width=size, height=size, bg='white', highlightthickness=0)
+        self.size = size
+        self.chunk_progress = 0
+        self.audio_level = 0
+        self.recording = False
+        
+        # Create initial circles
+        self.create_oval(5, 5, size-5, size-5, tags="base_circle", fill='lightgray')
+        self.create_oval(20, 20, size-20, size-20, tags="inner_circle", fill='white')
+        
+        # Add text display
+        self.create_text(size//2, size//2, text="0", tags="countdown_text", 
+                        font=("Arial", int(size/4)))
+    
+    def update(self, chunk_progress, audio_level):
+        """
+        Update both visualizations
+        chunk_progress: 0-100 for countdown
+        audio_level: 0-100 for audio level
+        """
+        self.chunk_progress = chunk_progress
+        self.audio_level = audio_level
+        
+        # Update outer progress arc (chunk timer)
+        self.delete("progress_arc")
+        angle = int(360 * (self.chunk_progress / 100))
+        self.create_arc(5, 5, self.size-5, self.size-5, 
+                       start=0, extent=angle, 
+                       tags="progress_arc", 
+                       fill='green')
+        
+        # Update inner circle (audio level)
+        self.delete("audio_circle")
+        radius = (self.audio_level / 100) * (self.size/4)
+        center = self.size/2
+        color = self._get_audio_color(self.audio_level)
+        self.create_oval(center-radius, center-radius,
+                        center+radius, center+radius,
+                        tags="audio_circle", 
+                        fill=color)
+        
+        # Update countdown text
+        self.delete("countdown_text")
+        remaining = int((100 - self.chunk_progress) / 10)  # Simplified countdown
+        self.create_text(self.size//2, self.size//2, 
+                        text=str(remaining),
+                        tags="countdown_text",
+                        font=("Arial", int(self.size/4)))
+    
+    def _get_audio_color(self, level):
+        """Return color based on audio level"""
+        if level < 30:
+            return '#00ff00'  # Green
+        elif level < 70:
+            return '#ffff00'  # Yellow
+        else:
+            return '#ff0000'  # Red
+
 class APIKeyFrame(ttk.LabelFrame):
     def __init__(self, master):
         super().__init__(master, text="API Keys")

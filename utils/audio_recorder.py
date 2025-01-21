@@ -4,12 +4,14 @@ import io
 from pydub import AudioSegment
 import threading
 import time
+import numpy as np
 from typing import Optional, Callable
 
 class AudioRecorder:
     """Handles real-time audio recording with MP3 conversion"""
     
     def __init__(self, format=pyaudio.paInt16, channels=1, rate=44100, chunk=1024, mp3_bitrate='128k'):
+        self.recent_frames = []  # Keep recent frames for level monitoring
         self.format = format
         self.channels = channels
         self.rate = rate
@@ -43,6 +45,20 @@ class AudioRecorder:
         self._thread = threading.Thread(target=record)
         self._thread.start()
         
+    def get_audio_level(self) -> float:
+        """Get current audio level (RMS)"""
+        if not self.recent_frames:
+            return 0.0
+        try:
+            # Convert recent audio data to numpy array
+            audio_data = np.frombuffer(b''.join(self.recent_frames), dtype=np.int16)
+            # Calculate RMS
+            rms = np.sqrt(np.mean(np.square(audio_data)))
+            # Normalize to 0-1
+            return min(1.0, rms / 32767)
+        except:
+            return 0.0
+
     def stop(self) -> bytes:
         """Stop recording and return MP3 data"""
         self.is_recording = False

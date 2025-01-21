@@ -352,6 +352,10 @@ class RecordingFrame(ttk.Frame):
         if self.transcribing:
             try:
                 self.assemblyai_session.process_audio_chunk(audio_chunk)
+                # Keep last 10 frames for level monitoring
+                self.recent_frames.append(audio_chunk)
+                if len(self.recent_frames) > 10:
+                    self.recent_frames.pop(0)
             except Exception as e:
                 print(f"Transcription error: {e}")
         
