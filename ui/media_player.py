@@ -164,6 +164,8 @@ class MediaPlayerFrame(ttk.LabelFrame):
             
             # Load audio for waveform visualization
             audio_data, sample_rate = sf.read(file_path, dtype='float32')
+            self.audio_data = audio_data
+            self.sample_rate = sample_rate
             
             # Clear previous plot
             self.ax.clear()
@@ -255,16 +257,17 @@ class MediaPlayerFrame(ttk.LabelFrame):
             
     def on_waveform_click(self, event):
         """Handle click on waveform"""
-        if event.inaxes == self.ax and self.audio_data is not None:
-            # Convert x position to samples
+        if event.inaxes == self.ax and hasattr(self, 'audio_data'):
+            # Convert x position to time
             click_time = event.xdata
-            self.current_position = int(click_time * self.sample_rate)
-            # Update slider
-            position_percent = (self.current_position / len(self.audio_data)) * 100
-            self.position_slider.set(position_percent)
-            # Update playhead
-            self.playhead_line.set_xdata(click_time)
-            self.canvas.draw_idle()
+            if click_time < 0:
+                click_time = 0
+            elif click_time > self.duration:
+                click_time = self.duration
+                
+            # Update position and seek
+            self.current_position = click_time
+            self.seek_position(str((click_time / self.duration) * 100))
             
     def update_playhead(self):
         """Update playhead position during playback"""
