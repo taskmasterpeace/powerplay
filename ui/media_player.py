@@ -69,6 +69,8 @@ class MediaPlayerFrame(ttk.LabelFrame):
         self.executor = ThreadPoolExecutor(max_workers=1)
         self.chunk_size = 100000  # Adjust based on performance
         self.max_waveform_points = 1000  # Maximum points to display
+        self.audio_player = AudioPlayer()
+        self.seek_update_time = 0
         
         # Filename display
         self.filename_var = tk.StringVar(value="No file loaded")
@@ -151,9 +153,6 @@ class MediaPlayerFrame(ttk.LabelFrame):
         self.current_position = 0
         self.update_id = None
 
-        # Setup pygame mixer
-        pygame.init()
-        mixer.init()
         
     def setup_ui(self):
         """Initialize UI components"""
@@ -341,22 +340,14 @@ class MediaPlayerFrame(ttk.LabelFrame):
         if not self.audio_file:
             return
             
-        if self.playing:
-            mixer.music.pause()
-            self.playing = False
-            self.paused = True
+        if self.audio_player.is_playing():
+            self.audio_player.pause()
             self.play_button.configure(text="Play")
             if self.update_id:
                 self.after_cancel(self.update_id)
         else:
             try:
-                if self.paused:
-                    mixer.music.unpause()
-                else:
-                    mixer.music.load(self.audio_file)  # Reload if not paused
-                    mixer.music.play()
-                self.playing = True
-                self.paused = False
+                self.audio_player.play()
                 self.play_button.configure(text="Pause")
                 self.start_playback_updates()
             except Exception as e:
@@ -376,16 +367,18 @@ class MediaPlayerFrame(ttk.LabelFrame):
         if self.update_id:
             self.after_cancel(self.update_id)
         
+    def _throttled_seek(self, value):
+        """Throttle seek operations to prevent overload"""
+        now = time.time()
+        if now - self.seek_update_time > 0.1:  # 100ms throttle
+            self.seek_position(value)
+            self.seek_update_time = now
+            
     def seek_position(self, value):
         """Handle seeking in audio"""
         if self.audio_file:
-            position = float(value) * self.duration / 100
-            # Need to restart playback for seeking
-            was_playing = self.playing
-            mixer.music.play()
-            mixer.music.set_pos(position)
-            if not was_playing:
-                mixer.music.pause()
+            position = (float(value) / 100) * self.duration
+            self.audio_player.seek(position)
             self.current_position = position
             self.update_playhead()
             
@@ -436,13 +429,15 @@ class MediaPlayerFrame(ttk.LabelFrame):
     def start_playback_updates(self):
         """Start updating playback position"""
         def update():
-            if mixer.music.get_busy():
-                self.current_position = mixer.music.get_pos() / 1000  # Convert to seconds
-                self.update_time_display()
-                self.update_playhead()
-                self.update_id = self.after(50, update)
+            if self.audio_player.is_playing():
+                self.current_position = self.audio_player.get_position()
+                if self.current_position >= self.duration:
+                    self.stop_audio()
+                else:
+                    self.update_time_display()
+                    self.update_playhead()
+                    self.update_id = self.after(50, update)
             else:
-                self.playing = False
                 self.play_button.configure(text="Play")
         self.update_id = self.after(50, update)
 
@@ -467,3 +462,11 @@ class MediaPlayerFrame(ttk.LabelFrame):
         if self.update_timer_id:
             self.after_cancel(self.update_timer_id)
             self.update_timer_id = None
+            
+    def destroy(self):
+        """Cleanup resources before destroying widget"""
+        if self.audio_player:
+            self.audio_player.stop()
+        if self.update_id:
+            self.after_cancel(self.update_id)
+        super().destroy()
