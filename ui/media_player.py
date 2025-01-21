@@ -151,51 +151,107 @@ class MediaPlayerFrame(ttk.LabelFrame):
         pygame.init()
         mixer.init()
         
-    def load_audio(self, file_path):
-        """Load audio file and display waveform"""
-        self.audio_file = file_path
-        self.filename_var.set(os.path.basename(file_path))
+    def __init__(self, master):
+        super().__init__(master, text="Media Player")
+        self.executor = ThreadPoolExecutor(max_workers=1)
+        self.setup_ui()
+        self.chunk_size = 100000  # Adjust based on performance
+        self.max_waveform_points = 1000  # Maximum points to display
         
+    def setup_ui(self):
+        """Initialize UI components"""
+        # Add loading indicator
+        self.progress_var = tk.StringVar(value="")
+        self.progress_label = ttk.Label(self, textvariable=self.progress_var)
+        self.progress_label.pack()
+        
+        # Rest of your existing UI setup...
+        
+    def load_audio(self, file_path):
+        """Entry point for loading audio"""
+        self.audio_file = file_path
+        self.filename_var.set("Loading...")
+        self.show_loading_progress()
+        
+        # Start async loading
+        self.master.after(50, self.load_audio_async, file_path)
+        
+    def show_loading_progress(self):
+        """Show loading progress in the waveform area"""
+        # Clear previous plot
+        self.ax.clear()
+        self.ax.text(0.5, 0.5, 'Loading...', 
+                    horizontalalignment='center',
+                    verticalalignment='center')
+        self.canvas.draw()
+        
+    def load_audio_async(self, file_path):
+        """Load audio file asynchronously"""
         try:
-            # Load audio for pygame
+            # Load waveform data in chunks
+            audio_data = self.load_waveform(file_path)
+            
+            # Downsample for visualization
+            display_data = self.prepare_waveform_data(audio_data)
+            
+            # Update waveform display
+            self.plot_waveform(display_data)
+            
+            # Load audio for playback
             mixer.music.load(file_path)
             sound = mixer.Sound(file_path)
             self.duration = sound.get_length()
             
-            # Load audio for waveform visualization
-            audio_data, sample_rate = sf.read(file_path, dtype='float32')
-            self.audio_data = audio_data
-            self.sample_rate = sample_rate
-            
-            # Clear previous plot
-            self.ax.clear()
-            
-            # Plot waveform using mono for visualization only
-            if len(audio_data.shape) > 1:
-                audio_mono = np.mean(audio_data, axis=1)
-            else:
-                audio_mono = audio_data
-                
-            time_axis = np.arange(len(audio_mono)) / sample_rate
-            self.ax.plot(time_axis, audio_mono, color='blue', alpha=0.5)
-            self.ax.set_xlabel('Time (s)')
-            self.ax.set_ylabel('Amplitude')
-            
-            # Re-add playhead line
-            self.playhead_line = self.ax.axvline(x=0, color='red', linewidth=1, zorder=10)
-            
-            # Adjust plot layout
-            self.fig.tight_layout()
-            
-            # Update canvas
-            self.canvas.draw()
-            
-            # Reset controls
+            # Update UI
+            self.filename_var.set(os.path.basename(file_path))
             self.position_slider.set(0)
             self.time_var.set(f"00:00 / {int(self.duration//60):02d}:{int(self.duration%60):02d}")
             
         except Exception as e:
+            self.filename_var.set(f"Error loading file: {str(e)}")
             print(f"Error loading audio: {str(e)}")
+            
+    def load_waveform(self, file_path):
+        """Load waveform in chunks"""
+        chunks = []
+        with sf.SoundFile(file_path) as f:
+            while data := f.read(self.chunk_size):
+                # Convert to mono if needed
+                if len(data.shape) > 1:
+                    data = np.mean(data, axis=1)
+                chunks.append(data)
+                
+        return np.concatenate(chunks)
+        
+    def prepare_waveform_data(self, audio_data):
+        """Downsample audio data for visualization"""
+        if len(audio_data) > self.max_waveform_points:
+            # Calculate reduction factor
+            reduction = len(audio_data) // self.max_waveform_points
+            
+            # Reshape and take mean of chunks
+            audio_data = audio_data[:reduction * self.max_waveform_points]
+            audio_data = audio_data.reshape(-1, reduction).mean(axis=1)
+        
+        return audio_data
+        
+    def plot_waveform(self, audio_data):
+        """Plot the waveform visualization"""
+        self.ax.clear()
+        
+        time_axis = np.arange(len(audio_data)) / (len(audio_data) / self.duration)
+        self.ax.plot(time_axis, audio_data, color='blue', alpha=0.5)
+        self.ax.set_xlabel('Time (s)')
+        self.ax.set_ylabel('Amplitude')
+        
+        # Re-add playhead line
+        self.playhead_line = self.ax.axvline(x=0, color='red', linewidth=1, zorder=10)
+        
+        # Adjust plot layout
+        self.fig.tight_layout()
+        
+        # Update canvas
+        self.canvas.draw()
             
     def load_transcript(self, transcript_path):
         """Load transcript file"""
