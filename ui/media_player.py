@@ -250,8 +250,14 @@ class MediaPlayerFrame(ttk.LabelFrame):
     def prepare_waveform_data(self, audio_data):
         """Downsample audio data for visualization with safety checks"""
         try:
-            if len(audio_data) == 0:
+            if audio_data is None or len(audio_data) == 0:
                 raise ValueError("Empty audio data")
+
+            # Convert to numpy array if not already
+            audio_data = np.array(audio_data)
+            
+            # Handle NaN and Inf values
+            audio_data = np.nan_to_num(audio_data, nan=0.0, posinf=1.0, neginf=-1.0)
                 
             if len(audio_data) > self.max_waveform_points:
                 # Calculate reduction factor
@@ -261,17 +267,26 @@ class MediaPlayerFrame(ttk.LabelFrame):
                 valid_length = (len(audio_data) // reduction) * reduction
                 audio_data = audio_data[:valid_length]
                 
-                # Reshape and take mean of chunks
-                audio_data = audio_data.reshape(-1, reduction).mean(axis=1)
+                try:
+                    # Reshape and take mean of chunks
+                    audio_data = audio_data.reshape(-1, reduction)
+                    audio_data = np.mean(audio_data, axis=1)
+                except ValueError as e:
+                    print(f"Reshape error: {e}")
+                    # Fallback to simple decimation
+                    audio_data = audio_data[::reduction]
             
             # Normalize amplitude with additional safety checks
-            max_val = np.max(np.abs(audio_data))
-            if max_val > 0:  # Only normalize if we have non-zero values
-                audio_data = audio_data / max_val
+            abs_max = np.max(np.abs(audio_data))
+            if abs_max > 1e-10:  # Use small epsilon instead of zero
+                audio_data = audio_data / abs_max
             else:
-                # Return zero array of correct length if all values are zero
-                audio_data = np.zeros_like(audio_data)
+                # If signal is essentially zero, return flat line
+                audio_data = np.zeros(len(audio_data))
                 
+            # Final safety check for any remaining invalid values
+            audio_data = np.clip(audio_data, -1.0, 1.0)
+            
             return audio_data
             
         except Exception as e:
