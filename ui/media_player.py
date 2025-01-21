@@ -55,19 +55,19 @@ class AudioPlayer:
                             self.current_position += frames_to_write
                             self.queue.put(("position", self.current_position))
                 
-                channels = 2 if len(self.audio_data.shape) > 1 else 1
-                self.stream = sd.OutputStream(
-                    channels=channels,
-                    samplerate=self.sample_rate,
-                    dtype='float32',
-                    callback=callback,
-                    blocksize=4096,
-                    latency='high'
-                )
-                
-                with self.stream:
-                    while self.playing:
-                        sd.sleep(100)
+                    channels = 2 if len(self.audio_data.shape) > 1 else 1
+                    self.stream = sd.OutputStream(
+                        channels=channels,
+                        samplerate=self.sample_rate,
+                        dtype='float32',
+                        callback=callback,
+                        blocksize=2048,
+                        latency='low'
+                    )
+                    
+                    with self.stream:
+                        while self.playing:
+                            sd.sleep(50)
                         
             except Exception as e:
                 print(f"Audio thread error: {e}")
@@ -402,7 +402,7 @@ class MediaPlayerFrame(ttk.LabelFrame):
         except Empty:
             pass
         finally:
-            self.after(50, self._check_audio_queue)
+            self.after(20, self._check_audio_queue)
     
     def _handle_position_update(self, position):
         """Handle position updates from audio thread"""
