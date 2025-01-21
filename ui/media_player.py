@@ -212,32 +212,69 @@ class MediaPlayerFrame(ttk.LabelFrame):
             print(f"Error loading audio: {str(e)}")
             
     def load_waveform(self, file_path):
-        """Load waveform in chunks"""
-        chunks = []
-        with sf.SoundFile(file_path) as f:
-            while True:
-                data = f.read(self.chunk_size)
-                if len(data) == 0:
-                    break
-                # Convert to mono if needed
-                if len(data.shape) > 1:
-                    data = np.mean(data, axis=1)
-                chunks.append(data)
+        """Load waveform in chunks with error handling"""
+        try:
+            chunks = []
+            with sf.SoundFile(file_path) as f:
+                self.sample_rate = f.samplerate
+                while True:
+                    data = f.read(self.chunk_size)
+                    if len(data) == 0:
+                        break
+                    # Convert to mono if needed
+                    if len(data.shape) > 1:
+                        data = np.mean(data, axis=1)
+                    chunks.append(data)
+            
+            if not chunks:
+                raise ValueError("No audio data loaded")
                 
-        self.audio_data = np.concatenate(chunks)
-        return self.audio_data
+            self.audio_data = np.concatenate(chunks)
+            return self.audio_data
+            
+        except Exception as e:
+            print(f"Error in load_waveform: {str(e)}")
+            # Try alternate loading method using pygame
+            try:
+                sound = mixer.Sound(file_path)
+                array_data = pygame.sndarray.array(sound)
+                if len(array_data.shape) > 1:
+                    array_data = np.mean(array_data, axis=1)
+                self.audio_data = array_data.astype(np.float32) / 32767.0
+                self.sample_rate = mixer.get_init()[0]
+                return self.audio_data
+            except Exception as e2:
+                print(f"Fallback loading failed: {str(e2)}")
+                raise ValueError(f"Could not load audio file: {str(e)} / {str(e2)}")
         
     def prepare_waveform_data(self, audio_data):
-        """Downsample audio data for visualization"""
-        if len(audio_data) > self.max_waveform_points:
-            # Calculate reduction factor
-            reduction = len(audio_data) // self.max_waveform_points
+        """Downsample audio data for visualization with safety checks"""
+        try:
+            if len(audio_data) == 0:
+                raise ValueError("Empty audio data")
+                
+            if len(audio_data) > self.max_waveform_points:
+                # Calculate reduction factor
+                reduction = max(1, len(audio_data) // self.max_waveform_points)
+                
+                # Ensure we don't exceed array bounds
+                valid_length = (len(audio_data) // reduction) * reduction
+                audio_data = audio_data[:valid_length]
+                
+                # Reshape and take mean of chunks
+                audio_data = audio_data.reshape(-1, reduction).mean(axis=1)
             
-            # Reshape and take mean of chunks
-            audio_data = audio_data[:reduction * self.max_waveform_points]
-            audio_data = audio_data.reshape(-1, reduction).mean(axis=1)
-        
-        return audio_data
+            # Normalize amplitude
+            if np.any(audio_data):  # Prevent division by zero
+                audio_data = audio_data / np.max(np.abs(audio_data))
+                
+            return audio_data
+            
+        except Exception as e:
+            print(f"Error in prepare_waveform_data: {str(e)}")
+            # Return simple sine wave as fallback
+            t = np.linspace(0, 2*np.pi, self.max_waveform_points)
+            return 0.5 * np.sin(t)
         
     def plot_waveform(self, audio_data):
         """Plot the waveform visualization"""
