@@ -139,27 +139,30 @@ class MediaPlayerFrame(ttk.LabelFrame):
         self.transcript_text.configure(yscrollcommand=self.scrollbar.set)
         
         # Audio playback state
-        self.audio_data = None
-        self.sample_rate = None
+        self.audio_file = None
         self.playing = False
         self.paused = False
-        self.audio_player = AudioPlayer()
-        self.after(100, self._check_audio_queue)
+        self.duration = 0
         self.current_position = 0
-        self.stream = None
-        self.play_thread = None
-        self.update_playhead_id = None
+        self.update_id = None
+
+        # Setup pygame mixer
+        pygame.init()
+        mixer.init()
         
     def load_audio(self, file_path):
         """Load audio file and display waveform"""
-        # Update filename display
-        self.filename_var.set(file_path.split('/')[-1].split('\\')[-1])
+        self.audio_file = file_path
+        self.filename_var.set(os.path.basename(file_path))
+        
         try:
+            # Load audio for pygame
+            mixer.music.load(file_path)
+            sound = mixer.Sound(file_path)
+            self.duration = sound.get_length()
+            
             # Load audio for waveform visualization
             audio_data, sample_rate = sf.read(file_path, dtype='float32')
-            
-            # Load audio for playback using pygame
-            self.audio_player.load(file_path)
             
             # Clear previous plot
             self.ax.clear()
@@ -186,8 +189,7 @@ class MediaPlayerFrame(ttk.LabelFrame):
             
             # Reset controls
             self.position_slider.set(0)
-            duration = self.audio_player.duration
-            self.time_var.set(f"00:00 / {int(duration//60):02d}:{int(duration%60):02d}")
+            self.time_var.set(f"00:00 / {int(self.duration//60):02d}:{int(self.duration%60):02d}")
             
         except Exception as e:
             print(f"Error loading audio: {str(e)}")
@@ -204,31 +206,51 @@ class MediaPlayerFrame(ttk.LabelFrame):
             
     def play_audio(self):
         """Toggle play/pause audio playback"""
-        if not self.audio_player.current_sound:
+        if not self.audio_file:
             return
             
-        if self.audio_player.is_playing():
-            self.audio_player.pause()
+        if self.playing:
+            mixer.music.pause()
+            self.playing = False
+            self.paused = True
             self.play_button.configure(text="Play")
+            if self.update_id:
+                self.after_cancel(self.update_id)
         else:
-            self.audio_player.play()
+            if self.paused:
+                mixer.music.unpause()
+            else:
+                mixer.music.play()
+            self.playing = True
+            self.paused = False
             self.play_button.configure(text="Pause")
             self.start_playback_updates()
             
     def stop_audio(self):
         """Stop audio playback"""
-        self.audio_player.stop()
+        mixer.music.stop()
+        self.playing = False
+        self.paused = False
         self.play_button.configure(text="Play")
+        self.current_position = 0
         self.position_slider.set(0)
-        self.update_time_display(0)
-        self.update_playhead(0)
+        self.update_time_display()
+        self.update_playhead()
+        if self.update_id:
+            self.after_cancel(self.update_id)
         
     def seek_position(self, value):
         """Handle seeking in audio"""
-        if self.audio_player.current_sound:
-            position = float(value) * self.audio_player.duration / 100
-            self.audio_player.seek(position)
-            self.update_playhead(position)
+        if self.audio_file:
+            position = float(value) * self.duration / 100
+            # Need to restart playback for seeking
+            was_playing = self.playing
+            mixer.music.play()
+            mixer.music.set_pos(position)
+            if not was_playing:
+                mixer.music.pause()
+            self.current_position = position
+            self.update_playhead()
             
     def on_waveform_click(self, event):
         """Handle click on waveform"""
@@ -273,124 +295,32 @@ class MediaPlayerFrame(ttk.LabelFrame):
             
         self.transcript_text.tag_config('search', background='yellow')
         
-    def _start_playback(self):
-        """Initialize and start audio playback"""
-        try:
-            def callback(outdata, frames, time, status):
-                if status:
-                    print("SoundDevice Callback Status:", status)
-                
-                if not self.playing:
-                    raise sd.CallbackStop()
-                
-                # Calculate remaining frames
-                remaining = len(self.audio_data) - self.current_position
-                if remaining <= 0:
-                    self.after(0, self._on_playback_complete)
-                    raise sd.CallbackStop()
-                
-                # Get chunk of audio data
-                chunk = self.audio_data[self.current_position:self.current_position + frames]
-                frames_to_write = len(chunk)
-                
-                # Handle stereo vs mono correctly
-                if len(chunk.shape) == 1:
-                    chunk = chunk.reshape(-1, 1)
-                
-                outdata[:frames_to_write] = chunk
-                if frames_to_write < len(outdata):
-                    outdata[frames_to_write:] = 0
-                
-                # Update position
-                self.current_position += frames_to_write
-            
-            # Clean up existing stream
-            if self.stream:
-                self.stream.stop()
-                self.stream.close()
-            
-            # Create new stream with optimized settings
-            channels = 2 if len(self.audio_data.shape) > 1 else 1
-            self.stream = sd.OutputStream(
-                channels=channels,
-                samplerate=self.sample_rate,
-                dtype='float32',
-                callback=callback,
-                blocksize=4096,  # Increased from 2048 to 4096
-                latency='high'   # Changed from 'low' to 'high'
-            )
-            
-            # Start playback
-            self.stream.start()
-            
-        except Exception as e:
-            print(f"Error starting playback: {str(e)}")
-            self._on_playback_complete()
-    def _update_playback_position(self):
-        """Update slider and time display from the main thread"""
-        if not self.playing:
-            return
-            
-        # Update slider position
-        position_percent = (self.current_position / len(self.audio_data)) * 100
-        self.position_slider.set(position_percent)
-        
-        # Update time display
-        current_time = self.current_position / self.sample_rate
-        total_time = len(self.audio_data) / self.sample_rate
-        self.time_var.set(
-            f"{int(current_time//60):02d}:{int(current_time%60):02d} / "
-            f"{int(total_time//60):02d}:{int(total_time%60):02d}"
-        )
     def start_playback_updates(self):
-        """Start periodic updates during playback"""
+        """Start updating playback position"""
         def update():
-            if self.audio_player.is_playing():
-                current_pos = self.audio_player.get_position()
-                self.update_time_display(current_pos)
-                self.update_playhead(current_pos)
+            if mixer.music.get_busy():
+                self.current_position = mixer.music.get_pos() / 1000  # Convert to seconds
+                self.update_time_display()
+                self.update_playhead()
                 self.update_id = self.after(50, update)
+            else:
+                self.playing = False
+                self.play_button.configure(text="Play")
         self.update_id = self.after(50, update)
 
-    def update_time_display(self, current_pos):
-        """Update time display and slider position"""
-        total_time = self.audio_player.duration
+    def update_time_display(self):
+        """Update time labels and slider"""
         self.time_var.set(
-            f"{int(current_pos//60):02d}:{int(current_pos%60):02d} / "
-            f"{int(total_time//60):02d}:{int(total_time%60):02d}"
+            f"{int(self.current_position//60):02d}:{int(self.current_position%60):02d} / "
+            f"{int(self.duration//60):02d}:{int(self.duration%60):02d}"
         )
-        self.position_slider.set((current_pos / total_time) * 100)
+        self.position_slider.set((self.current_position / self.duration) * 100)
 
-    def update_playhead(self, position):
-        """Update playhead position in waveform"""
-        self.playhead_line.set_xdata(position)
+    def update_playhead(self):
+        """Update waveform playhead position"""
+        self.playhead_line.set_xdata(self.current_position)
         self.canvas.draw_idle()
     
-    def _update_position(self):
-        """Update UI elements showing playback position"""
-        if self.playing:
-            # Update slider and time less frequently
-            if (self.current_position % 2048) == 0:  # Only update every 2048 samples
-                # Update slider
-                position_percent = (self.current_position / len(self.audio_data)) * 100
-                self.position_slider.set(position_percent)
-                
-                # Update time display
-                current_time = self.current_position / self.sample_rate
-                total_time = len(self.audio_data) / self.sample_rate
-                self.time_var.set(
-                    f"{int(current_time//60):02d}:{int(current_time%60):02d} / "
-                    f"{int(total_time//60):02d}:{int(total_time%60):02d}"
-                )
-            
-            # Update playhead even less frequently
-            if (self.current_position % 8192) == 0:  # Only update every 8192 samples
-                current_time = self.current_position / self.sample_rate
-                self.playhead_line.set_xdata(current_time)
-                self.canvas.draw_idle()
-            
-            # Schedule next update with longer interval
-            self.update_timer_id = self.after(200, self._update_position)  # Increased from 150 to 200ms
             
     def _on_playback_complete(self):
         """Handle playback completion"""
