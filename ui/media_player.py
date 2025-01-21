@@ -3,65 +3,82 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-import soundfile as sf
-import sounddevice as sd
 import numpy as np
+from pydub import AudioSegment
+from pydub.playback import _play_with_simpleaudio
 import threading
 import time
-from queue import Queue, Empty
 from concurrent.futures import ThreadPoolExecutor
-
-import pygame
-from pygame import mixer
 
 class AudioPlayer:
     def __init__(self):
-        pygame.init()
-        mixer.init()
-        self.current_sound = None
+        self.audio_segment = None
+        self.playback = None
+        self.start_time = 0
         self.paused_position = 0
         self.duration = 0
+        self.playing = False
+        self.lock = threading.Lock()
 
     def load(self, file_path):
-        self.current_sound = mixer.Sound(file_path)
-        self.duration = self.current_sound.get_length()
+        """Load an audio file using pydub."""
+        self.audio_segment = AudioSegment.from_file(file_path)
+        self.duration = len(self.audio_segment) / 1000  # Convert to seconds
 
     def play(self):
-        if self.current_sound:
-            if self.paused_position > 0:
-                self.current_sound.play(start=self.paused_position)
-            else:
-                self.current_sound.play()
-            self.paused_position = 0
+        """Play or resume playback."""
+        if self.audio_segment:
+            with self.lock:
+                if self.playback and not self.playback.is_playing():
+                    self.playback = None
+                if not self.playback:
+                    start_ms = int(self.paused_position * 1000)
+                    audio_to_play = self.audio_segment[start_ms:]
+                    self.playback = _play_with_simpleaudio(audio_to_play)
+                    self.start_time = time.time() - self.paused_position
+                    self.playing = True
 
     def pause(self):
-        if self.current_sound and self.is_playing():
-            self.paused_position = self.get_position()
-            self.current_sound.stop()
+        """Pause playback."""
+        if self.playback and self.playback.is_playing():
+            with self.lock:
+                self.playback.stop()
+                self.paused_position = self.get_position()
+                self.playing = False
 
     def stop(self):
-        if self.current_sound:
-            self.current_sound.stop()
-            self.paused_position = 0
+        """Stop playback and reset position."""
+        if self.playback:
+            with self.lock:
+                self.playback.stop()
+                self.playback = None
+                self.paused_position = 0
+                self.playing = False
 
     def seek(self, position):
-        if self.current_sound:
-            was_playing = self.is_playing()
-            self.paused_position = position
-            if was_playing:
-                self.play()
+        """Seek to a specific position in seconds."""
+        if self.audio_segment:
+            with self.lock:
+                was_playing = self.playing
+                self.stop()
+                self.paused_position = position
+                if was_playing:
+                    self.play()
 
     def get_position(self):
-        if self.current_sound and self.is_playing():
-            return self.current_sound.get_pos() / 1000  # Convert to seconds
+        """Get the current playback position in seconds."""
+        if self.playing and self.playback:
+            return time.time() - self.start_time
         return self.paused_position
 
     def is_playing(self):
-        return mixer.get_busy()
+        """Check if audio is currently playing."""
+        return self.playing
 
     def set_volume(self, volume):
-        if self.current_sound:
-            self.current_sound.set_volume(volume)
+        """Set playback volume (0.0 to 1.0)."""
+        if self.audio_segment:
+            self.audio_segment = self.audio_segment.apply_gain(20 * np.log10(max(volume, 0.0001)))
 
 class MediaPlayerFrame(ttk.LabelFrame):
     def __init__(self, master):
@@ -211,46 +228,25 @@ class MediaPlayerFrame(ttk.LabelFrame):
             print(f"Error loading audio: {str(e)}")
             
     def load_waveform(self, file_path):
-        """Load waveform in chunks with error handling"""
+        """Load waveform data from audio file"""
         try:
-            chunks = []
-            with sf.SoundFile(file_path) as f:
-                self.sample_rate = f.samplerate
-                while True:
-                    data = f.read(self.chunk_size)
-                    if len(data) == 0:
-                        break
-                    # Convert to mono if needed
-                    if len(data.shape) > 1:
-                        data = np.mean(data, axis=1)
-                    # Check for invalid values
-                    if np.any(np.isnan(data)) or np.any(np.isinf(data)):
-                        data = np.nan_to_num(data, nan=0.0, posinf=1.0, neginf=-1.0)
-                    chunks.append(data)
+            audio_segment = AudioSegment.from_file(file_path)
+            samples = np.array(audio_segment.get_array_of_samples())
             
-            if not chunks:
-                raise ValueError("No audio data loaded")
-                
-            self.audio_data = np.concatenate(chunks)
-            # Final safety check on concatenated data
-            if np.any(np.isnan(self.audio_data)) or np.any(np.isinf(self.audio_data)):
-                self.audio_data = np.nan_to_num(self.audio_data, nan=0.0, posinf=1.0, neginf=-1.0)
+            # Convert to mono if stereo
+            if audio_segment.channels == 2:
+                samples = samples.reshape((-1, 2)).mean(axis=1)
+            
+            # Normalize to float between -1 and 1
+            samples = samples / (1 << (8 * audio_segment.sample_width - 1))
+            
+            self.audio_data = samples
+            self.sample_rate = audio_segment.frame_rate
             return self.audio_data
             
         except Exception as e:
-            print(f"Error in load_waveform: {str(e)}")
-            # Try alternate loading method using pygame
-            try:
-                sound = mixer.Sound(file_path)
-                array_data = pygame.sndarray.array(sound)
-                if len(array_data.shape) > 1:
-                    array_data = np.mean(array_data, axis=1)
-                self.audio_data = array_data.astype(np.float32) / 32767.0
-                self.sample_rate = mixer.get_init()[0]
-                return self.audio_data
-            except Exception as e2:
-                print(f"Fallback loading failed: {str(e2)}")
-                raise ValueError(f"Could not load audio file: {str(e)} / {str(e2)}")
+            print(f"Error loading audio file: {str(e)}")
+            raise ValueError(f"Could not load audio file: {str(e)}")
         
     def prepare_waveform_data(self, audio_data):
         """Downsample audio data for visualization with safety checks"""
@@ -356,9 +352,7 @@ class MediaPlayerFrame(ttk.LabelFrame):
             
     def stop_audio(self):
         """Stop audio playback"""
-        mixer.music.stop()
-        self.playing = False
-        self.paused = False
+        self.audio_player.stop()
         self.play_button.configure(text="Play")
         self.current_position = 0
         self.position_slider.set(0)
