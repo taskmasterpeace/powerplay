@@ -26,12 +26,13 @@ class AudioPlayer:
     def play(self):
         """Play or resume playback."""
         if self.audio_segment:
+            # Calculate the audio segment to play outside the lock
+            start_ms = int(self.paused_position * 1000)
+            audio_to_play = self.audio_segment[start_ms:]
             with self.lock:
                 if self.playback and not self.playback.is_playing():
                     self.playback = None
                 if not self.playback:
-                    start_ms = int(self.paused_position * 1000)
-                    audio_to_play = self.audio_segment[start_ms:]
                     self.playback = _play_with_simpleaudio(audio_to_play)
                     self.start_time = time.time() - self.paused_position
                     self.playing = True
@@ -214,24 +215,22 @@ class MediaPlayerFrame(ttk.LabelFrame):
                 self.update_id = None
         else:
             try:
-                self.audio_player.play()
-                self.play_button.configure(text="Pause")
-                self.start_playback_updates()
+                # Submit the play task to the executor to run in background
+                self.executor.submit(self._play_audio_thread)
             except Exception as e:
                 print(f"Error playing audio: {e}")
                 messagebox.showerror("Playback Error", str(e))
 
     def _play_audio_thread(self):
-        """Handle audio playback in a separate thread"""
+        """Handle audio playback in a background thread."""
         try:
-            print("Playing audio in thread")
             self.audio_player.play()
-            self.after(0, lambda: self.play_button.configure(text="Pause"))
-            self.after(0, self.start_playback_updates)
+            # Schedule UI updates on the main thread
+            self.master.after(0, lambda: self.play_button.configure(text="Pause"))
+            self.master.after(0, self.start_playback_updates)
         except Exception as e:
             error_msg = str(e)
-            print(f"Error in playback thread: {error_msg}")
-            self.after(0, lambda: messagebox.showerror("Playback Error", error_msg))
+            self.master.after(0, lambda: messagebox.showerror("Playback Error", error_msg))
             
     def stop_audio(self):
         """Stop audio playback"""
