@@ -147,6 +147,7 @@ class RecordingFrame(ttk.Frame):
         # State variables for interval processing
         self.last_process_time = 0  # Tracks when we last processed text
         self.accumulated_text = ""   # Holds text between processing intervals
+        self.recent_frames = []      # Store recent audio frames for level monitoring
         
         # Meeting Configuration Frame
         self.config_frame = ttk.LabelFrame(self, text="Meeting Configuration")
