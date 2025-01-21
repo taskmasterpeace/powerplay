@@ -145,11 +145,9 @@ class CalendarView(ttk.Frame):
         
         # Bind events for all files list
         self.all_files_listbox.bind('<<ListboxSelect>>', self.on_all_files_select)
-        self.all_files_listbox.bind('<Double-Button-1>', self.on_all_files_double_click)
         
-        # Bind file selection, double-click and right-click
+        # Bind file selection and right-click
         self.file_listbox.bind('<<ListboxSelect>>', self.on_file_select)
-        self.file_listbox.bind('<Double-Button-1>', self.on_file_double_click)
         self.file_listbox.bind('<Button-3>', self.show_context_menu)
         
         # Create context menu
@@ -358,44 +356,6 @@ class CalendarView(ttk.Frame):
                 has_transcript = self.app.file_handler.check_transcript_exists(file_path)
                 self.view_transcript_btn.configure(state='normal' if has_transcript else 'disabled')
                 
-                # Load audio and transcript in media player and switch to media player tab
-                self.app.main_window.media_player.load_audio(file_path)
-                if has_transcript:
-                    transcript_path = os.path.splitext(file_path)[0] + '_transcript.txt'
-                    self.app.main_window.media_player.load_transcript(transcript_path)
-                self.app.main_window.notebook.select(self.app.main_window.media_player)
-                
-    def on_file_double_click(self, event):
-        """Handle double-click on file in listbox"""
-        selection = self.file_listbox.curselection()
-        if not selection:
-            return
-            
-        item_text = self.file_listbox.get(selection[0])
-        # Remove any status emoji and clean up whitespace
-        clean_text = item_text.lstrip("🎵 ").lstrip("📝 ")
-        date_str = clean_text.split(": ")[0].strip()  # Extract and clean date
-        
-        # Jump to date in calendar
-        file_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-        
-        # Clear any existing temporary events
-        self.calendar.calevent_remove('temp_highlight')
-        
-        # Set new date and create temporary highlight event
-        self.calendar.selection_set(file_date)
-        self.calendar.see(file_date)
-        self.calendar.calevent_create(file_date, 'temp_highlight', 'Selected')
-        
-        # Configure temporary highlight color
-        self.calendar.tag_config('temp_highlight', background='yellow')
-        
-        # Schedule highlight removal
-        self.after(500, lambda: self.calendar.calevent_remove('temp_highlight'))
-        
-        # Update file list for selected date
-        self.on_date_select(None)
-                
     def transcribe_selected(self):
         """Transcribe selected file using current service"""
         selection = self.file_listbox.curselection()
@@ -456,28 +416,6 @@ class CalendarView(ttk.Frame):
                 has_transcript = self.app.file_handler.check_transcript_exists(file_path)
                 self.view_transcript_btn.configure(state='normal' if has_transcript else 'disabled')
 
-    def on_all_files_double_click(self, event):
-        """Handle double-click in all files listbox"""
-        selection = self.all_files_listbox.curselection()
-        if not selection:
-            return
-            
-        item_text = self.all_files_listbox.get(selection[0])
-        # Remove any status emoji and leading/trailing spaces
-        clean_text = item_text.lstrip("🎵 ").lstrip("📝 ")
-        date_str = clean_text.split(": ")[0].strip()
-        
-        # Switch to date view tab
-        self.file_notebook.select(0)
-        
-        # Jump to date in calendar
-        file_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-        self.calendar.selection_set(file_date)
-        self.calendar.see(file_date)
-        
-        # Update file list for selected date
-        self.on_date_select(None)
-        
     def get_file_status(self, file_path: str) -> dict:
         """Get status for a file, loading or creating metadata if needed"""
         if file_path not in self.file_statuses:
