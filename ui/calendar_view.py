@@ -508,8 +508,11 @@ class CalendarView(ttk.Frame):
             item_text = self.file_listbox.get(selection[0])
         else:
             item_text = self.all_files_listbox.get(selection[0])
-        # Extract date from item text (format: "YYYY-MM-DD: filename")
-        date_str, file_name = item_text.split(": ", 1)
+            
+        # Clean up the text and extract components
+        clean_text = item_text.lstrip("🎵 ").lstrip("📝 ")
+        date_str = clean_text.split(": ")[0].strip()
+        file_name = clean_text.split(": ")[1].strip()
         
         # Switch to calendar view and select date
         self.calendar.selection_set(datetime.strptime(date_str, '%Y-%m-%d').date())
