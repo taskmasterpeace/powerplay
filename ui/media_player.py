@@ -61,18 +61,25 @@ class AudioPlayer:
                         samplerate=self.sample_rate,
                         dtype='float32',
                         callback=callback,
-                        blocksize=2048,
+                        blocksize=1024,  # Reduced for lower latency
                         latency='low'
                     )
+
+                    # Start the stream
+                    self.stream.start()
                     
-                    with self.stream:
-                        while self.playing:
-                            sd.sleep(50)
-                            
+                    # Keep thread alive while playing
+                    while self.playing and self.stream.active:
+                        sd.sleep(50)
+
                 except Exception as e:
                     print(f"Audio thread error: {e}")
                     self.queue.put(("error", str(e)))
-        threading.Thread(target=audio_thread, daemon=True).start()
+                finally:
+                    if self.stream:
+                        self.stream.close()
+                        self.stream = None
+            threading.Thread(target=audio_thread, daemon=True).start()
     
     def seek(self, position):
         with self.lock:
