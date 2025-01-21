@@ -1,8 +1,6 @@
 import os
 import tkinter as tk
 from tkinter import ttk, messagebox
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import numpy as np
 from pydub import AudioSegment
 from pydub.playback import _play_with_simpleaudio
@@ -107,14 +105,9 @@ class MediaPlayerFrame(ttk.LabelFrame):
         self.top_frame = ttk.Frame(self.main_container)
         self.main_container.add(self.top_frame, weight=1)
         
-        # Create matplotlib figure for waveform
-        self.fig, self.ax = plt.subplots(figsize=(8, 2))
-        self.canvas = FigureCanvasTkAgg(self.fig, master=self.top_frame)
-        self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
-        
-        # Add playhead line
-        self.playhead_line = self.ax.axvline(x=0, color='red', linewidth=1)
-        self.canvas.mpl_connect('button_press_event', self.on_waveform_click)
+        # Create a simple progress bar instead of waveform
+        self.progress_bar = ttk.Progressbar(self.top_frame, mode='determinate')
+        self.progress_bar.pack(fill=tk.X, expand=True, padx=5, pady=5)
         
         # Playback controls
         self.controls_frame = ttk.Frame(self.top_frame)
@@ -201,112 +194,20 @@ class MediaPlayerFrame(ttk.LabelFrame):
     def load_audio_async(self, file_path):
         """Load audio file asynchronously"""
         try:
-            # Load audio for playback first
             self.audio_player.load(file_path)
             self.duration = self.audio_player.duration
             
-            # Validate duration
             if self.duration <= 0:
-                raise ValueError("Invalid audio duration (<= 0 seconds)")
+                raise ValueError("Invalid audio duration")
                 
-            # Load waveform data
-            audio_data = self.load_waveform(file_path)
-            display_data = self.prepare_waveform_data(audio_data)
-            self.plot_waveform(display_data)
-            
-            # Update UI
             self.filename_var.set(os.path.basename(file_path))
             self.position_slider.set(0)
+            self.progress_bar['value'] = 0
             self.time_var.set(f"00:00 / {int(self.duration//60):02d}:{int(self.duration%60):02d}")
             
         except Exception as e:
             self.filename_var.set(f"Error loading file: {str(e)}")
             print(f"Error loading audio: {str(e)}")
-            
-    def load_waveform(self, file_path):
-        """Load waveform data from audio file"""
-        try:
-            audio_segment = AudioSegment.from_file(file_path)
-            
-            # Validate audio content
-            if len(audio_segment) == 0:
-                raise ValueError("Empty audio file")
-                
-            samples = np.array(audio_segment.get_array_of_samples())
-            
-            # Convert to mono if stereo
-            if audio_segment.channels == 2:
-                samples = samples.reshape((-1, 2)).mean(axis=1)
-            
-            # Normalize to float between -1 and 1
-            samples = samples / (1 << (8 * audio_segment.sample_width - 1))
-            
-            self.audio_data = samples
-            self.sample_rate = audio_segment.frame_rate
-            return self.audio_data
-            
-        except Exception as e:
-            print(f"Error loading audio file: {str(e)}")
-            raise ValueError(f"Could not load audio file: {str(e)}")
-        
-    def prepare_waveform_data(self, audio_data):
-        """Downsample audio data for visualization with safety checks"""
-        try:
-            if audio_data is None or len(audio_data) == 0:
-                return np.zeros(self.max_waveform_points)
-
-            # Convert to numpy array and ensure float type
-            audio_data = np.array(audio_data, dtype=np.float32)
-            audio_data = np.nan_to_num(audio_data, nan=0.0)
-            
-            # Check for valid data
-            max_abs_val = np.max(np.abs(audio_data))
-            if max_abs_val < 1e-10:
-                return np.zeros(self.max_waveform_points)
-
-            # Efficient downsampling using block reduction
-            if len(audio_data) > self.max_waveform_points:
-                block_size = len(audio_data) // self.max_waveform_points
-                audio_data = audio_data[:block_size * self.max_waveform_points]
-                audio_data = audio_data.reshape(-1, block_size)
-                audio_data = np.max(np.abs(audio_data), axis=1)
-                
-            # Final safety checks
-            audio_data = np.clip(audio_data, -1.0, 1.0)
-            
-            # Verify no invalid values remain
-            if np.any(np.isnan(audio_data)) or np.any(np.isinf(audio_data)):
-                print("Warning: Invalid values after processing, returning zeros")
-                return np.zeros(len(audio_data))
-                
-            return audio_data
-            
-        except Exception as e:
-            print(f"Error in prepare_waveform_data: {str(e)}")
-            # Return simple sine wave as fallback
-            t = np.linspace(0, 2*np.pi, self.max_waveform_points)
-            return 0.5 * np.sin(t)
-        
-    def plot_waveform(self, audio_data):
-        """Plot the waveform visualization"""
-        self.ax.clear()
-        
-        # Handle invalid duration
-        if self.duration <= 0 or len(audio_data) == 0:
-            self.ax.text(0.5, 0.5, 'Invalid audio file', 
-                        horizontalalignment='center',
-                        verticalalignment='center')
-            self.canvas.draw()
-            return
-        
-        time_axis = np.linspace(0, self.duration, len(audio_data))  # Safer calculation
-        self.ax.plot(time_axis, audio_data, color='blue', alpha=0.5)
-        self.ax.set_xlabel('Time (s)')
-        self.ax.set_ylabel('Amplitude')
-        
-        self.playhead_line = self.ax.axvline(x=0, color='red', linewidth=1, zorder=10)
-        self.fig.tight_layout()
-        self.canvas.draw()
             
     def load_transcript(self, transcript_path):
         """Load transcript file"""
@@ -381,25 +282,6 @@ class MediaPlayerFrame(ttk.LabelFrame):
             self.current_position = position
             self.update_playhead()
             
-    def on_waveform_click(self, event):
-        """Handle click on waveform"""
-        if event.inaxes == self.ax and hasattr(self, 'audio_data'):
-            # Convert x position to time
-            click_time = event.xdata
-            if click_time < 0:
-                click_time = 0
-            elif click_time > self.duration:
-                click_time = self.duration
-                
-            # Update position and seek
-            self.current_position = click_time
-            self.seek_position(str((click_time / self.duration) * 100))
-            
-    def update_playhead(self):
-        """Update waveform playhead position"""
-        if hasattr(self, 'playhead_line'):
-            self.playhead_line.set_xdata(self.current_position)
-            self.canvas.draw_idle()
             
     def search_transcript(self):
         """Search within transcript"""
@@ -432,7 +314,9 @@ class MediaPlayerFrame(ttk.LabelFrame):
                     self.stop_audio()
                 else:
                     self.update_time_display()
-                    self.update_playhead()
+                    # Update progress bar
+                    progress = (self.current_position / self.duration) * 100
+                    self.progress_bar['value'] = progress
                     self.update_id = self.after(50, update)
             else:
                 self.play_button.configure(text="Play")
