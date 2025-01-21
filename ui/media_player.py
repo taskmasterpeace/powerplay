@@ -224,12 +224,18 @@ class MediaPlayerFrame(ttk.LabelFrame):
                     # Convert to mono if needed
                     if len(data.shape) > 1:
                         data = np.mean(data, axis=1)
+                    # Check for invalid values
+                    if np.any(np.isnan(data)) or np.any(np.isinf(data)):
+                        data = np.nan_to_num(data, nan=0.0, posinf=1.0, neginf=-1.0)
                     chunks.append(data)
             
             if not chunks:
                 raise ValueError("No audio data loaded")
                 
             self.audio_data = np.concatenate(chunks)
+            # Final safety check on concatenated data
+            if np.any(np.isnan(self.audio_data)) or np.any(np.isinf(self.audio_data)):
+                self.audio_data = np.nan_to_num(self.audio_data, nan=0.0, posinf=1.0, neginf=-1.0)
             return self.audio_data
             
         except Exception as e:
@@ -251,13 +257,19 @@ class MediaPlayerFrame(ttk.LabelFrame):
         """Downsample audio data for visualization with safety checks"""
         try:
             if audio_data is None or len(audio_data) == 0:
-                raise ValueError("Empty audio data")
+                print("Warning: Empty audio data")
+                return np.zeros(self.max_waveform_points)
 
-            # Convert to numpy array if not already
-            audio_data = np.array(audio_data)
+            # Convert to numpy array if not already and ensure float type
+            audio_data = np.array(audio_data, dtype=np.float64)
             
-            # Handle NaN and Inf values
+            # Replace any invalid values
             audio_data = np.nan_to_num(audio_data, nan=0.0, posinf=1.0, neginf=-1.0)
+            
+            # Early check for all-zero data
+            if np.all(audio_data == 0):
+                print("Warning: All-zero audio data")
+                return np.zeros(self.max_waveform_points)
                 
             if len(audio_data) > self.max_waveform_points:
                 # Calculate reduction factor
@@ -272,7 +284,7 @@ class MediaPlayerFrame(ttk.LabelFrame):
                     audio_data = audio_data.reshape(-1, reduction)
                     audio_data = np.mean(audio_data, axis=1)
                 except ValueError as e:
-                    print(f"Reshape error: {e}")
+                    print(f"Reshape error: {e}, falling back to decimation")
                     # Fallback to simple decimation
                     audio_data = audio_data[::reduction]
             
@@ -281,12 +293,17 @@ class MediaPlayerFrame(ttk.LabelFrame):
             if abs_max > 1e-10:  # Use small epsilon instead of zero
                 audio_data = audio_data / abs_max
             else:
-                # If signal is essentially zero, return flat line
-                audio_data = np.zeros(len(audio_data))
+                print("Warning: Very low amplitude audio")
+                return np.zeros(len(audio_data))
                 
-            # Final safety check for any remaining invalid values
+            # Final safety checks
             audio_data = np.clip(audio_data, -1.0, 1.0)
             
+            # Verify no invalid values remain
+            if np.any(np.isnan(audio_data)) or np.any(np.isinf(audio_data)):
+                print("Warning: Invalid values after processing, returning zeros")
+                return np.zeros(len(audio_data))
+                
             return audio_data
             
         except Exception as e:
