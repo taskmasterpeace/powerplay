@@ -326,6 +326,7 @@ class MediaPlayerFrame(ttk.LabelFrame):
         if self.audio_player.is_playing():
             print("Pausing playback")
             self.audio_player.pause()
+            self.playing = False
             self.play_button.configure(text="Play")
             if self.update_id:
                 self.after_cancel(self.update_id)
@@ -333,9 +334,10 @@ class MediaPlayerFrame(ttk.LabelFrame):
         else:
             print("Starting playback")
             try:
-                # Start playback in a separate thread
-                self.playing = True  # Set playing state
-                threading.Thread(target=self._play_audio_thread, daemon=True).start()
+                self.playing = True
+                self.audio_player.play()
+                self.play_button.configure(text="Pause")
+                self.start_playback_updates()
             except Exception as e:
                 self.playing = False
                 print(f"Error playing audio: {e}")
@@ -394,12 +396,10 @@ class MediaPlayerFrame(ttk.LabelFrame):
             self.seek_position(str((click_time / self.duration) * 100))
             
     def update_playhead(self):
-        """Update playhead position during playback"""
-        if self.playing and self.audio_data is not None:
-            time_position = self.current_position / self.sample_rate
-            self.playhead_line.set_xdata(time_position)
+        """Update waveform playhead position"""
+        if hasattr(self, 'playhead_line'):
+            self.playhead_line.set_xdata(self.current_position)
             self.canvas.draw_idle()
-            self.update_playhead_id = self.after(50, self.update_playhead)
             
     def search_transcript(self):
         """Search within transcript"""
@@ -426,17 +426,18 @@ class MediaPlayerFrame(ttk.LabelFrame):
     def start_playback_updates(self):
         """Start updating playback position"""
         def update():
-            if self.audio_player.is_playing():
+            if self.playing:
                 self.current_position = self.audio_player.get_position()
                 if self.current_position >= self.duration:
                     self.stop_audio()
                 else:
                     self.update_time_display()
                     self.update_playhead()
-                    self.update_id = self.after(100, update)  # Reduced update frequency
+                    self.update_id = self.after(50, update)
             else:
                 self.play_button.configure(text="Play")
-        self.update_id = self.after(100, update)  # Start with reduced frequency
+                
+        self.update_id = self.after(50, update)
 
     def update_time_display(self):
         """Update time labels and slider"""
