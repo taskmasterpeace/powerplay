@@ -267,8 +267,12 @@ class MediaPlayerFrame(ttk.LabelFrame):
                 print("Warning: Audio data is too quiet or empty")
                 return np.zeros(self.max_waveform_points)
 
-            # Normalize amplitude first since we know we have valid data
-            audio_data = audio_data / max_abs_val
+            # Normalize amplitude with safety check
+            if max_abs_val > 0:
+                audio_data = audio_data / max_abs_val
+            else:
+                print("Warning: Cannot normalize zero-amplitude audio data")
+                return np.zeros(self.max_waveform_points)
                 
             if len(audio_data) > self.max_waveform_points:
                 try:
