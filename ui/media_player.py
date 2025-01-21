@@ -195,9 +195,12 @@ class MediaPlayerFrame(ttk.LabelFrame):
             self.plot_waveform(display_data)
             
             # Load audio for playback
-            mixer.music.load(file_path)
-            sound = mixer.Sound(file_path)
-            self.duration = sound.get_length()
+            try:
+                mixer.music.load(file_path)
+                self.duration = mixer.Sound(file_path).get_length()
+            except Exception as e:
+                print(f"Error loading audio for playback: {e}")
+                raise
             
             # Update UI
             self.filename_var.set(os.path.basename(file_path))
@@ -212,13 +215,17 @@ class MediaPlayerFrame(ttk.LabelFrame):
         """Load waveform in chunks"""
         chunks = []
         with sf.SoundFile(file_path) as f:
-            while data := f.read(self.chunk_size):
+            while True:
+                data = f.read(self.chunk_size)
+                if len(data) == 0:
+                    break
                 # Convert to mono if needed
                 if len(data.shape) > 1:
                     data = np.mean(data, axis=1)
                 chunks.append(data)
                 
-        return np.concatenate(chunks)
+        self.audio_data = np.concatenate(chunks)
+        return self.audio_data
         
     def prepare_waveform_data(self, audio_data):
         """Downsample audio data for visualization"""
@@ -273,14 +280,19 @@ class MediaPlayerFrame(ttk.LabelFrame):
             if self.update_id:
                 self.after_cancel(self.update_id)
         else:
-            if self.paused:
-                mixer.music.unpause()
-            else:
-                mixer.music.play()
-            self.playing = True
-            self.paused = False
-            self.play_button.configure(text="Pause")
-            self.start_playback_updates()
+            try:
+                if self.paused:
+                    mixer.music.unpause()
+                else:
+                    mixer.music.load(self.audio_file)  # Reload if not paused
+                    mixer.music.play()
+                self.playing = True
+                self.paused = False
+                self.play_button.configure(text="Pause")
+                self.start_playback_updates()
+            except Exception as e:
+                print(f"Error playing audio: {e}")
+                messagebox.showerror("Playback Error", str(e))
             
     def stop_audio(self):
         """Stop audio playback"""
