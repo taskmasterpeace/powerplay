@@ -9,6 +9,7 @@ import numpy as np
 import threading
 import time
 from queue import Queue, Empty
+from concurrent.futures import ThreadPoolExecutor
 
 import pygame
 from pygame import mixer
@@ -65,6 +66,9 @@ class AudioPlayer:
 class MediaPlayerFrame(ttk.LabelFrame):
     def __init__(self, master):
         super().__init__(master, text="Media Player")
+        self.executor = ThreadPoolExecutor(max_workers=1)
+        self.chunk_size = 100000  # Adjust based on performance
+        self.max_waveform_points = 1000  # Maximum points to display
         
         # Filename display
         self.filename_var = tk.StringVar(value="No file loaded")
@@ -150,13 +154,6 @@ class MediaPlayerFrame(ttk.LabelFrame):
         # Setup pygame mixer
         pygame.init()
         mixer.init()
-        
-    def __init__(self, master):
-        super().__init__(master, text="Media Player")
-        self.executor = ThreadPoolExecutor(max_workers=1)
-        self.setup_ui()
-        self.chunk_size = 100000  # Adjust based on performance
-        self.max_waveform_points = 1000  # Maximum points to display
         
     def setup_ui(self):
         """Initialize UI components"""
