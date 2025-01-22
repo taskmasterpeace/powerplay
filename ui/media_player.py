@@ -128,6 +128,7 @@ class MediaPlayerFrame(ttk.LabelFrame):
         super().__init__(master, text="Media Player")
         self.audio_player = AudioPlayer()
         self.seek_update_time = 0
+        self.duration = 0  # Initialize duration
         
         # Filename display
         self.filename_var = tk.StringVar(value="No file loaded")
@@ -266,6 +267,9 @@ class MediaPlayerFrame(ttk.LabelFrame):
             
     def stop_audio(self):
         """Stop audio playback"""
+        if not self.audio_file:
+            return
+            
         self.audio_player.stop()
         self.play_button.configure(text="Play")
         self.current_position = 0
