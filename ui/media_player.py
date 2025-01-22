@@ -17,7 +17,8 @@ class AudioPlayer:
         self.duration = 0
         self.playing = False
         self.lock = threading.Lock()
-        self._last_position = 0  # Track last known position
+        self._last_position = 0
+        self._volume = 1.0
 
     def load(self, file_path):
         """Load an audio file using pydub."""
@@ -30,11 +31,11 @@ class AudioPlayer:
             return False
 
         with self.lock:
-            if self.playing:
+            if self.playing and self.playback and self.playback.is_playing():
                 return False
                 
             try:
-                # Store current position before stopping
+                # Ensure clean state
                 if self.playback:
                     self._last_position = self.get_position()
                     self.playback.stop()
@@ -45,10 +46,15 @@ class AudioPlayer:
                 # Calculate start position and create new playback
                 start_ms = int(self._last_position * 1000)
                 audio_to_play = self.audio_segment[start_ms:]
+                
+                # Apply current volume
+                if self._volume != 1.0:
+                    audio_to_play = audio_to_play.apply_gain(20 * np.log10(max(self._volume, 0.0001)))
+                
                 self.playback = _play_with_simpleaudio(audio_to_play)
                 self.start_time = time.time() - self._last_position
-                self.playing = True
-                return True
+                self.playing = bool(self.playback and self.playback.is_playing())
+                return self.playing
             except Exception as e:
                 print(f"Playback error: {e}")
                 self.playing = False
@@ -102,8 +108,13 @@ class AudioPlayer:
 
     def set_volume(self, volume):
         """Set playback volume (0.0 to 1.0)."""
-        if self.audio_segment:
-            self.audio_segment = self.audio_segment.apply_gain(20 * np.log10(max(volume, 0.0001)))
+        self._volume = max(0.0, min(1.0, volume))
+        if self.playing:
+            # Restart playback with new volume
+            current_pos = self.get_position()
+            self.stop()
+            self.paused_position = current_pos
+            self.play()
 
 class MediaPlayerFrame(ttk.LabelFrame):
     def __init__(self, master):
@@ -266,9 +277,12 @@ class MediaPlayerFrame(ttk.LabelFrame):
     def seek_position(self, value):
         """Handle seeking in audio"""
         if self.audio_file:
-            position = (float(value) / 100) * self.duration
-            self.audio_player.seek(position)
-            self.current_position = position
+            now = time.time()
+            if now - self.seek_update_time > 0.1:  # 100ms throttle
+                position = (float(value) / 100) * self.audio_player.duration
+                self.audio_player.seek(position)
+                self.current_position = position
+                self.seek_update_time = now
             
             
     def search_transcript(self):
@@ -296,21 +310,24 @@ class MediaPlayerFrame(ttk.LabelFrame):
     def start_playback_updates(self):
         """Start updating playback position"""
         def update():
-            if self.audio_player.is_playing():
-                self.current_position = self.audio_player.get_position()
-                if self.current_position >= self.duration:
-                    self.stop_audio()
+            try:
+                if self.audio_player.is_playing():
+                    self.current_position = self.audio_player.get_position()
+                    if self.current_position >= self.audio_player.duration:
+                        self.after_idle(self.stop_audio)
+                    else:
+                        self.update_time_display()
+                        progress = (self.current_position / self.audio_player.duration) * 100
+                        self.position_slider.set(progress)
+                        self.update_id = self.after(50, update)
                 else:
-                    self.update_time_display()
-                    # Update position slider
-                    progress = (self.current_position / self.duration) * 100
-                    self.position_slider.set(progress)
-                    self.update_id = self.after(50, update)
-            else:
-                self.play_button.configure(text="Play")
+                    self.play_button.configure(text="Play")
+                    self.cancel_updates()
+            except Exception as e:
+                print(f"Update error: {e}")
                 self.cancel_updates()
                 
-        self.cancel_updates()  # Clear any existing updates
+        self.cancel_updates()
         self.update_id = self.after(50, update)
 
     def update_time_display(self):
