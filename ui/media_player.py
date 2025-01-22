@@ -45,6 +45,10 @@ class AudioPlayer:
 
                 # Calculate start position and create new playback
                 start_ms = int(self._last_position * 1000)
+                end_ms = len(self.audio_segment)
+                if start_ms >= end_ms:
+                    return False
+                    
                 audio_to_play = self.audio_segment[start_ms:]
                 
                 # Apply current volume
@@ -52,9 +56,12 @@ class AudioPlayer:
                     audio_to_play = audio_to_play.apply_gain(20 * np.log10(max(self._volume, 0.0001)))
                 
                 self.playback = _play_with_simpleaudio(audio_to_play)
+                if not self.playback:
+                    return False
+                    
                 self.start_time = time.time() - self._last_position
-                self.playing = bool(self.playback and self.playback.is_playing())
-                return self.playing
+                self.playing = True
+                return True
             except Exception as e:
                 print(f"Playback error: {e}")
                 self.playing = False
@@ -310,25 +317,29 @@ class MediaPlayerFrame(ttk.LabelFrame):
     def start_playback_updates(self):
         """Start updating playback position"""
         def update():
+            if not self.audio_player:
+                return
+                
             try:
                 if self.audio_player.is_playing():
                     self.current_position = self.audio_player.get_position()
                     if self.current_position >= self.audio_player.duration:
-                        self.after_idle(self.stop_audio)
-                    else:
-                        self.update_time_display()
-                        progress = (self.current_position / self.audio_player.duration) * 100
-                        self.position_slider.set(progress)
-                        self.update_id = self.after(50, update)
+                        self.master.after_idle(self.stop_audio)
+                        return
+                    self.update_time_display()
+                    progress = (self.current_position / self.audio_player.duration) * 100
+                    self.position_slider.set(progress)
+                    self.update_id = self.master.after(50, update)
                 else:
                     self.play_button.configure(text="Play")
                     self.cancel_updates()
             except Exception as e:
                 print(f"Update error: {e}")
+                self.play_button.configure(text="Play")
                 self.cancel_updates()
                 
         self.cancel_updates()
-        self.update_id = self.after(50, update)
+        self.update_id = self.master.after(50, update)
 
     def update_time_display(self):
         """Update time labels and slider"""
