@@ -17,6 +17,7 @@ class AudioPlayer:
         self.duration = 0
         self.playing = False
         self.lock = threading.Lock()
+        self._last_position = 0  # Track last known position
 
     def load(self, file_path):
         """Load an audio file using pydub."""
@@ -27,19 +28,25 @@ class AudioPlayer:
         """Play or resume playback."""
         if not self.audio_segment:
             return False
-            
+
         with self.lock:
+            if self.playing:
+                return False
+                
             try:
-                # Stop any existing playback
+                # Store current position before stopping
                 if self.playback:
+                    self._last_position = self.get_position()
                     self.playback.stop()
                     self.playback = None
-                
+                else:
+                    self._last_position = self.paused_position
+
                 # Calculate start position and create new playback
-                start_ms = int(self.paused_position * 1000)
+                start_ms = int(self._last_position * 1000)
                 audio_to_play = self.audio_segment[start_ms:]
                 self.playback = _play_with_simpleaudio(audio_to_play)
-                self.start_time = time.time() - self.paused_position
+                self.start_time = time.time() - self._last_position
                 self.playing = True
                 return True
             except Exception as e:
@@ -51,13 +58,13 @@ class AudioPlayer:
     def pause(self):
         """Pause playback."""
         with self.lock:
-            if not self.playing:
+            if not self.playing or not self.playback:
                 return False
                 
             try:
-                if self.playback:
-                    self.playback.stop()
                 self.paused_position = self.get_position()
+                self.playback.stop()
+                self.playback = None
                 self.playing = False
                 return True
             except Exception as e:
@@ -101,9 +108,6 @@ class AudioPlayer:
 class MediaPlayerFrame(ttk.LabelFrame):
     def __init__(self, master):
         super().__init__(master, text="Media Player")
-        self.executor = ThreadPoolExecutor(max_workers=1)
-        self.chunk_size = 100000  # Adjust based on performance
-        self.max_waveform_points = 1000  # Maximum points to display
         self.audio_player = AudioPlayer()
         self.seek_update_time = 0
         
@@ -228,27 +232,18 @@ class MediaPlayerFrame(ttk.LabelFrame):
 
         try:
             if self.audio_player.is_playing():
-                # Handle pause
                 if self.audio_player.pause():
                     self.play_button.configure(text="Play")
                     self.cancel_updates()
             else:
-                # Handle play
-                def play_task():
-                    success = self.audio_player.play()
-                    self.master.after(0, lambda: self._handle_play_result(success))
-                
-                self.executor.submit(play_task)
+                if self.audio_player.play():
+                    self.play_button.configure(text="Pause")
+                    self.start_playback_updates()
+                else:
+                    messagebox.showerror("Playback Error", "Failed to start playback")
         except Exception as e:
             messagebox.showerror("Playback Error", str(e))
             
-    def _handle_play_result(self, success):
-        """Handle the result of play operation"""
-        if success:
-            self.play_button.configure(text="Pause")
-            self.start_playback_updates()
-        else:
-            messagebox.showerror("Playback Error", "Failed to start playback")
 
             
     def stop_audio(self):
