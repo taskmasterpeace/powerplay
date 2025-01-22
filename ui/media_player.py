@@ -29,15 +29,15 @@ class AudioPlayer:
             return False
             
         with self.lock:
-            if self.playing:
-                return False
-                
-            start_ms = int(self.paused_position * 1000)
-            audio_to_play = self.audio_segment[start_ms:]
-            
             try:
+                # Stop any existing playback
                 if self.playback:
                     self.playback.stop()
+                    self.playback = None
+                
+                # Calculate start position and create new playback
+                start_ms = int(self.paused_position * 1000)
+                audio_to_play = self.audio_segment[start_ms:]
                 self.playback = _play_with_simpleaudio(audio_to_play)
                 self.start_time = time.time() - self.paused_position
                 self.playing = True
@@ -45,6 +45,7 @@ class AudioPlayer:
             except Exception as e:
                 print(f"Playback error: {e}")
                 self.playing = False
+                self.playback = None
                 return False
 
     def pause(self):
@@ -224,23 +225,30 @@ class MediaPlayerFrame(ttk.LabelFrame):
         """Toggle play/pause audio playback"""
         if not self.audio_file:
             return
+
+        try:
+            if self.audio_player.is_playing():
+                # Handle pause
+                if self.audio_player.pause():
+                    self.play_button.configure(text="Play")
+                    self.cancel_updates()
+            else:
+                # Handle play
+                def play_task():
+                    success = self.audio_player.play()
+                    self.master.after(0, lambda: self._handle_play_result(success))
+                
+                self.executor.submit(play_task)
+        except Exception as e:
+            messagebox.showerror("Playback Error", str(e))
             
-        if self.audio_player.is_playing():
-            if self.audio_player.pause():
-                self.play_button.configure(text="Play")
-                self.cancel_updates()
+    def _handle_play_result(self, success):
+        """Handle the result of play operation"""
+        if success:
+            self.play_button.configure(text="Pause")
+            self.start_playback_updates()
         else:
-            def play_task():
-                if self.audio_player.play():
-                    self.master.after(0, lambda: self.play_button.configure(text="Pause"))
-                    self.master.after(0, self.start_playback_updates)
-                else:
-                    self.master.after(0, lambda: messagebox.showerror(
-                        "Playback Error", 
-                        "Failed to start playback"
-                    ))
-            
-            self.executor.submit(play_task)
+            messagebox.showerror("Playback Error", "Failed to start playback")
 
             
     def stop_audio(self):
