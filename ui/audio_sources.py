@@ -547,7 +547,7 @@ class RecordingFrame(ttk.Frame):
             self.response_text.insert(tk.END, chunk_header)
             self.response_text.insert(tk.END, text)
             self.response_text.see(tk.END)
-            print(f"Processed chunk at {timestamp}")  # Debug print
+            print(f"Processed chunk at {current_time}")  # Debug print
         except Exception as e:
             print(f"Error processing text chunk: {e}")  # Debug print
             
