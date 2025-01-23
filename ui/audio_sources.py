@@ -495,14 +495,17 @@ class RecordingFrame(ttk.Frame):
         
     def trigger_instant_processing(self, event=None):
         """Handle F12 key press for instant processing"""
-        print("F12 pressed - triggering instant processing")  # Debug print
         if not self.recording:
-            print("Not recording, ignoring F12")  # Debug print
             return
             
         if not hasattr(self, 'accumulated_text'):
-            print("No accumulated text found")  # Debug print
             return
+            
+        # Flash the indicator to show chunk processing
+        self.dual_indicator.create_oval(5, 5, self.dual_indicator.size-5, 
+                                      self.dual_indicator.size-5, 
+                                      fill='yellow', tags="flash")
+        self.after(100, lambda: self.dual_indicator.delete("flash"))
             
         # Force immediate processing
         current_time = time.time()
@@ -530,11 +533,15 @@ class RecordingFrame(ttk.Frame):
         Future: Will integrate with LLM processing
         """
         if not text or not text.strip():
-            print("Empty text chunk, skipping processing")  # Debug print
+            print("Empty text chunk, skipping processing")
             return
             
-        timestamp = datetime.now().strftime('%H:%M:%S')
-        chunk_header = f"\n\n=== New Chunk ({timestamp}) ===\n"
+        current_time = datetime.now().strftime('%H:%M:%S')
+        elapsed_since_last = time.time() - self.last_process_time
+        chunk_header = (
+            f"\n\n=== New Chunk ({current_time}) ===\n"
+            f"Time since last chunk: {elapsed_since_last:.1f}s\n"
+        )
         
         try:
             self.response_text.insert(tk.END, chunk_header)
@@ -580,13 +587,11 @@ class RecordingFrame(ttk.Frame):
                 
     def format_transcript(self, packet):
         """Format transcript with timestamp and speaker"""
-        timestamp = packet.get('timestamp', 0)
-        if isinstance(timestamp, (int, float)):
-            minutes = int(timestamp // 60)
-            seconds = int(timestamp % 60)
-            timestamp_str = f"[{minutes:02d}:{seconds:02d}]"
-        else:
-            timestamp_str = "[00:00]"
+        # Use recording start time to calculate relative timestamp
+        current_time = time.time() - self.start_time
+        minutes = int(current_time // 60)
+        seconds = int(current_time % 60)
+        timestamp_str = f"[{minutes:02d}:{seconds:02d}]"
             
         speaker = packet.get('speaker', 'Speaker 1')
         text = packet.get('text', '')
