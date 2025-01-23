@@ -53,8 +53,12 @@ class DualPurposeIndicator(tk.Canvas):
         
         # Update countdown text with actual seconds
         self.delete("countdown_text")
+        if seconds_remaining == float('inf'):
+            display_text = "M"  # 'M' for Manual
+        else:
+            display_text = str(int(min(seconds_remaining, 999)))
         self.create_text(self.size//2, self.size//2, 
-                        text=str(int(seconds_remaining)),
+                        text=display_text,
                         tags="countdown_text",
                         font=("Arial", int(self.size/4)))
     
