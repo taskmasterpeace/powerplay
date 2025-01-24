@@ -587,6 +587,10 @@ class RecordingFrame(ttk.Frame):
         )
         
         try:
+            # Remove any existing tags from the text to be processed
+            current_end = self.transcript_text.index(tk.END)
+            self.transcript_text.tag_remove("unprocessed", "1.0", current_end)
+            
             # Add chunk header and text
             self.transcript_text.insert(tk.END, chunk_header)
             chunk_start = self.transcript_text.index(tk.END)
@@ -594,7 +598,7 @@ class RecordingFrame(ttk.Frame):
             chunk_end = self.transcript_text.index(tk.END)
             self.transcript_text.see(tk.END)
             
-            # Mark this chunk as being processed
+            # Mark entire chunk (including timestamps) as being processed
             self.transcript_text.tag_add("processing", chunk_start, chunk_end)
             
             # Process with LangChain placeholder
@@ -613,17 +617,15 @@ class RecordingFrame(ttk.Frame):
             self.response_text.see(tk.END)
             
             # Update chunk color to show it's been processed
-            chunk_ranges = self.transcript_text.tag_ranges("processing")
-            if chunk_ranges:
-                start, end = chunk_ranges[-2:]  # Get the last chunk's range
-                self.transcript_text.tag_remove("processing", start, end)
-                self.transcript_text.tag_add("processed", start, end)
-                
-                # Mark previous chunks as context
-                if len(chunk_ranges) > 2:
-                    for i in range(0, len(chunk_ranges)-2, 2):
-                        self.transcript_text.tag_remove("processed", chunk_ranges[i], chunk_ranges[i+1])
-                        self.transcript_text.tag_add("context", chunk_ranges[i], chunk_ranges[i+1])
+            self.transcript_text.tag_remove("processing", chunk_start, chunk_end)
+            self.transcript_text.tag_add("processed", chunk_start, chunk_end)
+            
+            # Find all previous chunks and mark them as context
+            all_processed = self.transcript_text.tag_ranges("processed")
+            if len(all_processed) > 2:  # If there are previous chunks
+                for i in range(0, len(all_processed)-2, 2):
+                    self.transcript_text.tag_remove("processed", all_processed[i], all_processed[i+1])
+                    self.transcript_text.tag_add("context", all_processed[i], all_processed[i+1])
             
             print(f"Processed chunk at {current_time}")  # Debug print
         except Exception as e:
@@ -678,8 +680,13 @@ class RecordingFrame(ttk.Frame):
         
     def update_transcript_display(self, text):
         """Update transcript display with new text"""
-        # Add new text without any special formatting
-        self.transcript_text.insert(tk.END, text, "unprocessed")  # Use default formatting
+        # Add new text with unprocessed tag
+        current_end = self.transcript_text.index(tk.END)
+        self.transcript_text.insert(tk.END, text)
+        new_end = self.transcript_text.index(tk.END)
+        
+        # Apply unprocessed tag to just the new text
+        self.transcript_text.tag_add("unprocessed", current_end, new_end)
         self.transcript_text.see(tk.END)
         
     def on_closing(self):
