@@ -577,10 +577,18 @@ class RecordingFrame(ttk.Frame):
             
         current_time = datetime.now().strftime('%H:%M:%S')
         elapsed_since_last = time.time() - self.last_process_time
-        chunk_header = (
-            f"\n\n=== New Chunk ({current_time}) ===\n"
-            f"Time since last chunk: {elapsed_since_last:.1f}s\n"
-        )
+        # Ensure there's a newline before starting a new chunk
+        current_text = self.transcript_text.get("1.0", tk.END)
+        if not current_text.endswith('\n\n'):
+            chunk_header = (
+                f"\n\n=== New Chunk ({current_time}) ===\n"
+                f"Time since last chunk: {elapsed_since_last:.1f}s\n"
+            )
+        else:
+            chunk_header = (
+                f"=== New Chunk ({current_time}) ===\n"
+                f"Time since last chunk: {elapsed_since_last:.1f}s\n"
+            )
         
         try:
             # Add chunk header and text
