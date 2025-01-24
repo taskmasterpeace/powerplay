@@ -569,16 +569,15 @@ class RecordingFrame(ttk.Frame):
         )
         
         try:
-            # Add chunk to transcript with color coding
-            chunk_start = self.transcript_text.index(tk.END)
+            # Add chunk header and text
             self.transcript_text.insert(tk.END, chunk_header)
+            chunk_start = self.transcript_text.index(tk.END)
             self.transcript_text.insert(tk.END, text)
             chunk_end = self.transcript_text.index(tk.END)
-            
-            # Color the new chunk light yellow to show it's being processed
-            self.transcript_text.tag_add("processing", chunk_start, chunk_end)
-            self.transcript_text.tag_config("processing", background="#FFFFD0")  # Light yellow
             self.transcript_text.see(tk.END)
+            
+            # Mark this chunk as being processed
+            self.transcript_text.tag_add("processing", chunk_start, chunk_end)
             
             # Process with LangChain placeholder
             template = {
@@ -661,6 +660,7 @@ class RecordingFrame(ttk.Frame):
         
     def update_transcript_display(self, text):
         """Update transcript display with new text"""
+        # Just add the raw text without any coloring
         self.transcript_text.insert(tk.END, text)
         self.transcript_text.see(tk.END)
         
