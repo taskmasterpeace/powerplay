@@ -440,32 +440,35 @@ class RecordingFrame(ttk.Frame):
                 # Save recording with standardized naming
                 current_time = datetime.now()
                 filename = f"{current_time.strftime('%y%m%d_%H%M')}_{self.meeting_name.get()}"
-            saved_path = self.app.file_handler.save_recording(
-                audio_data, 
-                filename,
-                metadata=self.metadata
-            )
-            
-            # Get the full transcript from the text widget
-            full_transcript = self.transcript_text.get('1.0', tk.END)
-            
-            # Generate and save transcript file next to the MP3
-            transcript_path = os.path.splitext(saved_path)[0] + '_transcript.txt'
-            try:
-                with open(transcript_path, 'w', encoding='utf-8') as f:
-                    f.write(full_transcript)
-                self.transcript_text.insert('end', f"\n\nTranscript saved: {transcript_path}\n")
-            except Exception as e:
-                self.transcript_text.insert('end', f"\n\nError saving transcript: {str(e)}\n")
+                saved_path = self.app.file_handler.save_recording(
+                    audio_data, 
+                    filename,
+                    metadata=self.metadata
+                )
                 
-            self.transcript_text.insert('end', f"\nRecording saved: {saved_path}\n")
-            
-        # Re-enable and update UI
-        self.record_btn.configure(
-            text="Start Recording",
-            state=tk.NORMAL
-        )
-        self.update()  # Force final UI update
+                # Get the full transcript from the text widget
+                full_transcript = self.transcript_text.get('1.0', tk.END)
+                
+                # Generate and save transcript file next to the MP3
+                transcript_path = os.path.splitext(saved_path)[0] + '_transcript.txt'
+                try:
+                    with open(transcript_path, 'w', encoding='utf-8') as f:
+                        f.write(full_transcript)
+                    self.transcript_text.insert('end', f"\n\nTranscript saved: {transcript_path}\n")
+                except Exception as e:
+                    self.transcript_text.insert('end', f"\n\nError saving transcript: {str(e)}\n")
+                    
+                self.transcript_text.insert('end', f"\nRecording saved: {saved_path}\n")
+                
+        except Exception as e:
+            print(f"Error in stop_recording: {e}")
+        finally:
+            # Re-enable and update UI
+            self.record_btn.configure(
+                text="Start Recording",
+                state=tk.NORMAL
+            )
+            self.update()  # Force final UI update
         
     def update_timer(self):
         if self.recording:
