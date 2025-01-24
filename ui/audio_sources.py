@@ -395,77 +395,89 @@ class RecordingFrame(ttk.Frame):
         
     def stop_recording(self):
         """Stop recording and cleanup resources"""
+        if not hasattr(self, 'recorder') and not hasattr(self, 'assemblyai_session'):
+            return  # Nothing to stop
+            
         audio_data = None
         try:
             # Disable UI elements and set flags first
             self.record_btn.configure(state=tk.DISABLED)
             self.update()  # Force UI update
+            
+            # Set flags to stop threads
             self.transcribing = False
             self.recording = False
             
-            # Stop audio recorder first since it's feeding data
+            # Stop audio recorder and get final data
             if hasattr(self, 'recorder'):
                 try:
                     print("Stopping audio recorder...")
                     audio_data = self.recorder.stop()
-                    delattr(self, 'recorder')
+                    self.recorder = None  # Clear reference
                 except Exception as e:
                     print(f"Error stopping recorder: {e}")
             
-            # Give transcription thread time to finish
-            print("Waiting for transcription thread to finish...")
-            time.sleep(0.5)  # Short delay to allow final transcriptions
-            
-            # Stop AssemblyAI session with timeout
+            # Stop AssemblyAI session
             if hasattr(self, 'assemblyai_session'):
                 try:
                     print("Stopping AssemblyAI session...")
-                    self.assemblyai_session.stop()  # Direct call instead of thread
-                    delattr(self, 'assemblyai_session')
+                    self.assemblyai_session.stop()
+                    self.assemblyai_session = None  # Clear reference
                 except Exception as e:
-                    print(f"Error in AssemblyAI cleanup: {e}")
-                        
-            # Update metadata and save recording
-            if hasattr(self, 'metadata'):
-                self.metadata["hotkey_markers"] = [
-                    {
-                        "timestamp": f"{int(m['timestamp'] // 60):02d}:{int(m['timestamp'] % 60):02d}",
-                        "key": m['key']
-                    } for m in self.markers
-                ]
-                
-                # Save recording with standardized naming
-                current_time = datetime.now()
-                filename = f"{current_time.strftime('%y%m%d_%H%M')}_{self.meeting_name.get()}"
-                saved_path = self.app.file_handler.save_recording(
-                    audio_data, 
-                    filename,
-                    metadata=self.metadata
-                )
-                
-                # Get the full transcript from the text widget
-                full_transcript = self.transcript_text.get('1.0', tk.END)
-                
-                # Generate and save transcript file next to the MP3
-                transcript_path = os.path.splitext(saved_path)[0] + '_transcript.txt'
+                    print(f"Error stopping AssemblyAI: {e}")
+            
+            # Clear any remaining audio data
+            self.recent_frames.clear()
+            
+            # Save recording if we have audio data
+            if audio_data and hasattr(self, 'metadata'):
                 try:
+                    # Update metadata with markers
+                    self.metadata["hotkey_markers"] = [
+                        {
+                            "timestamp": f"{int(m['timestamp'] // 60):02d}:{int(m['timestamp'] % 60):02d}",
+                            "key": m['key']
+                        } for m in self.markers
+                    ]
+                    
+                    # Save recording
+                    current_time = datetime.now()
+                    filename = f"{current_time.strftime('%y%m%d_%H%M')}_{self.meeting_name.get()}"
+                    saved_path = self.app.file_handler.save_recording(
+                        audio_data, 
+                        filename,
+                        metadata=self.metadata
+                    )
+                    
+                    # Save transcript
+                    full_transcript = self.transcript_text.get('1.0', tk.END)
+                    transcript_path = os.path.splitext(saved_path)[0] + '_transcript.txt'
                     with open(transcript_path, 'w', encoding='utf-8') as f:
                         f.write(full_transcript)
-                    self.transcript_text.insert('end', f"\n\nTranscript saved: {transcript_path}\n")
-                except Exception as e:
-                    self.transcript_text.insert('end', f"\n\nError saving transcript: {str(e)}\n")
                     
-                self.transcript_text.insert('end', f"\nRecording saved: {saved_path}\n")
-                
+                    self.transcript_text.insert('end', f"\n\nTranscript saved: {transcript_path}")
+                    self.transcript_text.insert('end', f"\nRecording saved: {saved_path}")
+                    
+                except Exception as e:
+                    print(f"Error saving recording/transcript: {e}")
+                    self.transcript_text.insert('end', f"\n\nError saving files: {str(e)}")
+            
         except Exception as e:
             print(f"Error in stop_recording: {e}")
+            messagebox.showerror("Error", f"Error stopping recording: {str(e)}")
+            
         finally:
-            # Re-enable and update UI
+            # Clean up remaining resources
+            self.accumulated_text = ""
+            self.markers.clear()
+            self.metadata = None
+            
+            # Re-enable UI
             self.record_btn.configure(
                 text="Start Recording",
                 state=tk.NORMAL
             )
-            self.update()  # Force final UI update
+            self.update()
         
     def update_timer(self):
         if self.recording:
