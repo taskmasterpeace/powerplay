@@ -223,26 +223,48 @@ class RecordingFrame(ttk.Frame):
                        variable=self.show_timestamps,
                        command=self.refresh_display).pack(side=tk.RIGHT)
         
-        # Split View Frame
+        # Split View Frame with Template Selection
         self.split_frame = ttk.PanedWindow(self, orient=tk.HORIZONTAL)
         self.split_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         
-        # Transcript Frame
+        # Left side: Transcript Frame (smaller)
         self.transcript_frame = ttk.LabelFrame(self.split_frame, text="Live Transcription")
         self.split_frame.add(self.transcript_frame, weight=1)
         
-        self.transcript_text = tk.Text(self.transcript_frame, wrap=tk.WORD)
+        self.transcript_text = tk.Text(self.transcript_frame, 
+                                     wrap=tk.WORD,
+                                     background='#f0f0f0',  # Light gray background
+                                     font=('Courier', 9))   # Smaller font
         self.transcript_text.pack(fill=tk.BOTH, expand=True)
         self.transcript_scroll = ttk.Scrollbar(self.transcript_frame, 
                                              command=self.transcript_text.yview)
         self.transcript_scroll.pack(side=tk.RIGHT, fill=tk.Y)
         self.transcript_text.configure(yscrollcommand=self.transcript_scroll.set)
         
-        # Future LLM Response Frame (placeholder)
-        self.response_frame = ttk.LabelFrame(self.split_frame, text="AI Responses")
-        self.split_frame.add(self.response_frame, weight=1)
+        # Right side: LLM Response Frame (larger)
+        self.response_frame = ttk.LabelFrame(self.split_frame, text="AI Insights")
+        self.split_frame.add(self.response_frame, weight=2)  # Give more space to responses
         
-        self.response_text = tk.Text(self.response_frame, wrap=tk.WORD)
+        # Template selection frame
+        self.template_frame = ttk.Frame(self.response_frame)
+        self.template_frame.pack(fill=tk.X, padx=5, pady=5)
+        
+        ttk.Label(self.template_frame, text="Analysis Template:").pack(side=tk.LEFT, padx=5)
+        self.template_var = tk.StringVar(value="Meeting Summary")
+        self.template_combo = ttk.Combobox(
+            self.template_frame,
+            textvariable=self.template_var,
+            values=["Meeting Summary", "Action Items", "Decision Tracking"],
+            width=20,
+            state="readonly"
+        )
+        self.template_combo.pack(side=tk.LEFT, padx=5)
+        
+        # Response text area
+        self.response_text = tk.Text(self.response_frame,
+                                   wrap=tk.WORD,
+                                   background='white',
+                                   font=('Arial', 11))      # Larger, more readable font
         self.response_text.pack(fill=tk.BOTH, expand=True)
         self.response_scroll = ttk.Scrollbar(self.response_frame, 
                                            command=self.response_text.yview)
@@ -528,9 +550,7 @@ class RecordingFrame(ttk.Frame):
             
     def process_text_chunk(self, text):
         """
-        Process accumulated text chunk
-        Currently just displays in response window
-        Future: Will integrate with LLM processing
+        Process accumulated text chunk using LangChain service
         """
         if not text or not text.strip():
             print("Empty text chunk, skipping processing")
@@ -544,9 +564,26 @@ class RecordingFrame(ttk.Frame):
         )
         
         try:
-            self.response_text.insert(tk.END, chunk_header)
-            self.response_text.insert(tk.END, text)
+            # Add chunk to transcript
+            self.transcript_text.insert(tk.END, chunk_header)
+            self.transcript_text.insert(tk.END, text)
+            self.transcript_text.see(tk.END)
+            
+            # Process with LangChain placeholder
+            template = {
+                "name": self.template_var.get(),
+                "system": "You are an AI assistant analyzing meeting transcripts.",
+                "user": f"Analyze this meeting segment: {text}"
+            }
+            
+            response = f"[AI Analysis ({self.template_var.get()})]\n"
+            response += "This is a placeholder for LangChain processing.\n"
+            response += f"Template: {template['name']}\n"
+            response += f"Chunk length: {len(text)} characters\n\n"
+            
+            self.response_text.insert(tk.END, response)
             self.response_text.see(tk.END)
+            
             print(f"Processed chunk at {current_time}")  # Debug print
         except Exception as e:
             print(f"Error processing text chunk: {e}")  # Debug print

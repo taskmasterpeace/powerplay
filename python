@@ -1,0 +1,51 @@
+from typing import List, Dict, Any
+import os
+from dotenv import load_dotenv
+
+class LangChainService:
+    """Placeholder for LangChain functionality"""
+    
+    def __init__(self):
+        load_dotenv()
+        self.api_key = os.getenv('OPENAI_API_KEY')
+        self.context_window = []
+        self.max_context_chunks = 5
+        
+    def process_chunk(self, chunk: str, template: Dict[str, str]) -> str:
+        """
+        Process a chunk of text using LangChain (placeholder)
+        
+        Args:
+            chunk: Text chunk to process
+            template: Dictionary containing system and user prompts
+            
+        Returns:
+            Processed response
+        """
+        # Add chunk to context window
+        self.context_window.append(chunk)
+        if len(self.context_window) > self.max_context_chunks:
+            self.context_window.pop(0)
+            
+        # TODO: Implement actual LangChain processing
+        return f"[LangChain Placeholder] Processed chunk with template: {template['name']}\n\n{chunk}"
+        
+    def get_available_templates(self) -> List[Dict[str, str]]:
+        """Get list of available templates"""
+        return [
+            {
+                "name": "Meeting Summary",
+                "system": "You are an AI assistant helping summarize meetings.",
+                "user": "Provide a concise summary of the key points discussed:"
+            },
+            {
+                "name": "Action Items",
+                "system": "You are an AI assistant tracking action items.",
+                "user": "List all action items and assignments mentioned:"
+            },
+            {
+                "name": "Decision Tracking",
+                "system": "You are an AI assistant tracking decisions.",
+                "user": "List all decisions made during this discussion:"
+            }
+        ]
