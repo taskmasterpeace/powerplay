@@ -272,6 +272,7 @@ class RecordingFrame(ttk.Frame):
         self.response_text.configure(yscrollcommand=self.response_scroll.set)
         
         # Configure text tags for chunk status
+        self.transcript_text.tag_configure("unprocessed")  # Default formatting
         self.transcript_text.tag_configure("processing", background="#FFFFD0")  # Light yellow
         self.transcript_text.tag_configure("processed", background="#E8F5E9")   # Light green
         self.transcript_text.tag_configure("context", background="#E3F2FD")     # Light blue
@@ -677,8 +678,8 @@ class RecordingFrame(ttk.Frame):
         
     def update_transcript_display(self, text):
         """Update transcript display with new text"""
-        # Just add the raw text without any coloring
-        self.transcript_text.insert(tk.END, text)
+        # Add new text without any special formatting
+        self.transcript_text.insert(tk.END, text, "unprocessed")  # Use default formatting
         self.transcript_text.see(tk.END)
         
     def on_closing(self):
