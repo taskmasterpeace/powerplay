@@ -430,8 +430,8 @@ class RecordingFrame(ttk.Frame):
                 finally:
                     if hasattr(self, 'assemblyai_session'):
                         delattr(self, 'assemblyai_session')
-            
-        # Update metadata with markers
+                        
+            # Update metadata with markers
         if hasattr(self, 'metadata'):
             self.metadata["hotkey_markers"] = [
                 {
