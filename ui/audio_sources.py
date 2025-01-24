@@ -398,6 +398,7 @@ class RecordingFrame(ttk.Frame):
         
     def stop_recording(self):
         """Stop recording and cleanup resources"""
+        audio_data = None
         try:
             # Disable UI elements first
             self.record_btn.configure(state=tk.DISABLED)
@@ -408,7 +409,6 @@ class RecordingFrame(ttk.Frame):
             self.recording = False
             
             # Stop audio recording first
-            audio_data = None
             if hasattr(self, 'recorder'):
                 try:
                     audio_data = self.recorder.stop()
@@ -431,8 +431,8 @@ class RecordingFrame(ttk.Frame):
                     if hasattr(self, 'assemblyai_session'):
                         delattr(self, 'assemblyai_session')
                         
-            # Update metadata with markers
-        if hasattr(self, 'metadata'):
+            # Update metadata and save recording
+            if hasattr(self, 'metadata'):
             self.metadata["hotkey_markers"] = [
                 {
                     "timestamp": f"{int(m['timestamp'] // 60):02d}:{int(m['timestamp'] % 60):02d}",
