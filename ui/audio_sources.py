@@ -271,11 +271,7 @@ class RecordingFrame(ttk.Frame):
         self.response_scroll.pack(side=tk.RIGHT, fill=tk.Y)
         self.response_text.configure(yscrollcommand=self.response_scroll.set)
         
-        # Configure text tags for chunk status
-        self.transcript_text.tag_configure("unprocessed")  # Default formatting
-        self.transcript_text.tag_configure("processing", background="#FFFFD0")  # Light yellow
-        self.transcript_text.tag_configure("processed", background="#E8F5E9")   # Light green
-        self.transcript_text.tag_configure("context", background="#E3F2FD")     # Light blue
+        # No text tags needed anymore
         
         # Bind function keys
         for i in range(1, 13):  # F1 through F12
@@ -587,19 +583,10 @@ class RecordingFrame(ttk.Frame):
         )
         
         try:
-            # Remove any existing tags from the text to be processed
-            current_end = self.transcript_text.index(tk.END)
-            self.transcript_text.tag_remove("unprocessed", "1.0", current_end)
-            
             # Add chunk header and text
             self.transcript_text.insert(tk.END, chunk_header)
-            chunk_start = self.transcript_text.index(tk.END)
             self.transcript_text.insert(tk.END, text)
-            chunk_end = self.transcript_text.index(tk.END)
             self.transcript_text.see(tk.END)
-            
-            # Mark entire chunk (including timestamps) as being processed
-            self.transcript_text.tag_add("processing", chunk_start, chunk_end)
             
             # Process with LangChain placeholder
             template = {
@@ -616,17 +603,6 @@ class RecordingFrame(ttk.Frame):
             self.response_text.insert(tk.END, response)
             self.response_text.see(tk.END)
             
-            # Update only this chunk's color to show it's been processed
-            self.transcript_text.tag_remove("processing", chunk_start, chunk_end)
-            self.transcript_text.tag_add("processed", chunk_start, chunk_end)
-            
-            # Only mark the previous chunk as context
-            processed_ranges = self.transcript_text.tag_ranges("processed")
-            if len(processed_ranges) > 2:  # If there's at least one previous chunk
-                prev_start = processed_ranges[-4]  # Second to last chunk start
-                prev_end = processed_ranges[-3]    # Second to last chunk end
-                self.transcript_text.tag_remove("processed", prev_start, prev_end)
-                self.transcript_text.tag_add("context", prev_start, prev_end)
             
             print(f"Processed chunk at {current_time}")  # Debug print
         except Exception as e:
