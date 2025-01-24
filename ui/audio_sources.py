@@ -616,16 +616,17 @@ class RecordingFrame(ttk.Frame):
             self.response_text.insert(tk.END, response)
             self.response_text.see(tk.END)
             
-            # Update chunk color to show it's been processed
+            # Update only this chunk's color to show it's been processed
             self.transcript_text.tag_remove("processing", chunk_start, chunk_end)
             self.transcript_text.tag_add("processed", chunk_start, chunk_end)
             
-            # Find all previous chunks and mark them as context
-            all_processed = self.transcript_text.tag_ranges("processed")
-            if len(all_processed) > 2:  # If there are previous chunks
-                for i in range(0, len(all_processed)-2, 2):
-                    self.transcript_text.tag_remove("processed", all_processed[i], all_processed[i+1])
-                    self.transcript_text.tag_add("context", all_processed[i], all_processed[i+1])
+            # Only mark the previous chunk as context
+            processed_ranges = self.transcript_text.tag_ranges("processed")
+            if len(processed_ranges) > 2:  # If there's at least one previous chunk
+                prev_start = processed_ranges[-4]  # Second to last chunk start
+                prev_end = processed_ranges[-3]    # Second to last chunk end
+                self.transcript_text.tag_remove("processed", prev_start, prev_end)
+                self.transcript_text.tag_add("context", prev_start, prev_end)
             
             print(f"Processed chunk at {current_time}")  # Debug print
         except Exception as e:
@@ -680,13 +681,8 @@ class RecordingFrame(ttk.Frame):
         
     def update_transcript_display(self, text):
         """Update transcript display with new text"""
-        # Add new text with unprocessed tag
-        current_end = self.transcript_text.index(tk.END)
+        # Add new text without any tags (plain formatting)
         self.transcript_text.insert(tk.END, text)
-        new_end = self.transcript_text.index(tk.END)
-        
-        # Apply unprocessed tag to just the new text
-        self.transcript_text.tag_add("unprocessed", current_end, new_end)
         self.transcript_text.see(tk.END)
         
     def on_closing(self):
