@@ -1,0 +1,24 @@
+[00:00] Speaker 1: All right, so process interval is set for 20 seconds, but the circle is only showing.
+[00:00] Speaker 1: Only starting at 10 seconds, so that's a part of the problem already. And it'll. Be interesting to see if the trunk respects.
+[00:00] Speaker 1: The timer or for respect. Yeah, it respects the timer. Doesn't respect the process interval.
+[00:00] Speaker 1: So that's very interesting. So we already have one trunk being delivered. That's the first chunk being delivered already.
+[00:00] Speaker 1: And that's a good thing, because now we have that chunk right there.
+[00:00] Speaker 1: It would understand what the conversation was.
+[00:00] Speaker 1: It would understand. It would gain context in the early going. That's the idea.
+[00:00] Speaker 1: And then that's the second chunk. So now it has even more context. It's understanding exactly.
+[00:00] Speaker 1: What the conversation is being said.
+[00:00] Speaker 1: So I kind of wanted to.
+[00:00] Speaker 1: Gather information almost.
+[00:00] Speaker 1: It's going to feel compelled to reply.
+[00:00] Speaker 1: Every time.
+[00:00] Speaker 1: And a lot of people.
+[00:00] Speaker 1: Have acknowledged or something like that.
+[00:00] Speaker 1: I've seen people dot, dot, dot or something like that.
+[00:00] Speaker 1: But that works for a lot of people, but I don't know if it works here.
+[00:00] Speaker 1: Specifically. I don't know if it works too.
+[00:00] Speaker 1: So it actually finds the end of a fucking sentence. This is amazing.
+[00:00] Speaker 1: Okay, so that's another observation. It's going to find the end of a sentence. In order.
+[00:00] Speaker 1: To end my chunk.
+[00:00] Speaker 1: So that's very interesting as well.
+[00:00] Speaker 1: So this is how the chunks are going to be received.
+

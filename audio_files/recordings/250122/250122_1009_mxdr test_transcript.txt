@@ -1,0 +1,71 @@
+[00:00] Speaker 1: Hi, everyone.
+[00:00] Speaker 1: Select.
+[00:00] Speaker 1: Who drives this call usually.
+[00:00] Speaker 1: Anyone from platform team.
+[00:00] Speaker 1: Yeah.
+[00:00] Speaker 1: And Subam. They have some agenda to bring, discuss.
+[00:00] Speaker 1: And we support that.
+[00:00] Speaker 1: We usually don't have.
+[00:00] Speaker 1: Because the requests are coming from the client side of the product.
+[00:00] Speaker 1: Regarding. We don't have any new agenda. The last major update that we provide was on the GCP Elmo entering an instrument wing effort.
+[00:00] Speaker 1: Both the.
+[00:00] Speaker 1: Sodium are involved in it. Yaman location.
+[00:00] Speaker 1: Driving that. So no new update on that.
+[00:00] Speaker 1: As far as I'm concerned.
+[00:00] Speaker 1: Location.
+[00:00] Speaker 1: New update and on the TCP method.
+[00:00] Speaker 1: Nothing much.
+[00:00] Speaker 1: Only thing that sortim confirms.
+[00:00] Speaker 1: They will be doing that. Automatic checks and initial validations. So if there are events, it will be closed ticket will be resolved automatically. There are no events formed. It will be escalated to the Ms. Obscure. So that will be the sole team.
+[00:00] Speaker 1: 's actions on the ticket that generated.
+[00:00] Speaker 1: That's the only thing. Confirmation.
+[00:00] Speaker 1: Okay.
+[00:00] Speaker 1: But it doesn't make much sense to locust, right?
+[00:00] Speaker 1: So is GCP, where expectation is that it's going to afford the live events, right? And mostly it will be true positive only.
+[00:00] Speaker 1: If the source is going to check immediately, that will be definitely come out as two positively, right?
+[00:00] Speaker 1: Yes.
+[00:00] Speaker 1: We enabled Slink alerts. It's been, like, close to two and a half weeks. Now and so far it's only four incident got generated so far. So the volume going to be low and.
+[00:00] Speaker 1: Okay.
+[00:00] Speaker 1: And even threshold site, whatever.
+[00:00] Speaker 1: That splank CSV was holding at thresholds are running as per that CSV. Only.
+[00:00] Speaker 1: So alert count base, we are good. Probably once we put them in the production queue for a couple of days. Probably we'll get an if we are missing something.
+[00:00] Speaker 1: Or like along with the existing one.
+[00:00] Speaker 1: This is specific alert that we're talking. Okay, so the high medium critical alert that you. Discussed no high medium on earning high medium.
+[00:00] Speaker 1: Is it giving us lesser volume compared to the older approach?
+[00:00] Speaker 1: Or very less than. Yeah, okay.
+[00:00] Speaker 1: What's the percentage of reduction? Do you have any idea on that? Like, is it 50%?
+[00:00] Speaker 1: You could say more than 50%.
+[00:00] Speaker 1: Because we consider Hannah Wright, on an average day, we'd be getting around ten to 15. Tickets easily.
+[00:00] Speaker 1: Right now the account is less than two or three.
+[00:00] Speaker 1: Even for 100 clients.
+[00:00] Speaker 1: We are not missing anything, right?
+[00:00] Speaker 1: We are following the splunk CSV thresholds only, right? So the existing thresholds only. So we should be good.
+[00:00] Speaker 1: Perfect.
+[00:00] Speaker 1: Hey. Hi, lena.
+[00:00] Speaker 1: Good morning.
+[00:00] Speaker 1: Hi, kim. Happy Wednesday.
+[00:00] Speaker 1: We're just discussing about those health alerts at Lena. Would you like to add anything? From your site.
+[00:00] Speaker 1: No, please continue.
+[00:00] Speaker 1: I hope I didn't interrupt. No, I think.
+[00:00] Speaker 1: I almost done location explaining the reduction in the overall health alert volume after we deployed the GCP alerts in production.
+[00:00] Speaker 1: And the soar effort that's going on in the back end.
+[00:00] Speaker 1: To automate.
+[00:00] Speaker 1: It has the rollout.
+[00:00] Speaker 1: Completed or we are using the faith approach.
+[00:00] Speaker 1: Okay, so do you like to confirm on that?
+[00:00] Speaker 1: Yeah, Delin. I mean.
+[00:00] Speaker 1: Bigquery is a based splint. Color is still in production. That's the primary one as of now.
+[00:00] Speaker 1: We push the new GCP roles into production as well.
+[00:00] Speaker 1: So that's ings are getting credited for that. Right now we are just monitoring it. Probably.
+[00:00] Speaker 1: Once the server automation is done, everything is ready, right? Probably. That's where we going to. Make it as a primary one for handling the health monitoring.
+[00:00] Speaker 1: Thank you, lakesh.
+[00:00] Speaker 1: Yeah, go ahead. No, please, go ahead. I do have two questions. One is related to the lookup. File editing.
+[00:00] Speaker 1: Think it's still in progress to see if we can build a report on it.
+[00:00] Speaker 1: And the other one is. We have a UCM request related to integrating hi sex fees.
+[00:00] Speaker 1: Into Chronicles, and Keshe has been helping.
+[00:00] Speaker 1: To share some guidance.
+[00:00] Speaker 1: But I don't think. Have we used the run functions anywhere?
+[00:00] Speaker 1: For other feed deployment or this is the first time we would be using them.
+[00:00] Speaker 1: Email.
+[00:00] Speaker 1: Yes. The cloud. Run. Yeah. This will be the first time we will be doing it. We have not done.
+

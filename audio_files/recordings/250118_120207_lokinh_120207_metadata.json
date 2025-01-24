@@ -1,0 +1,13 @@
+{
+  "status": {
+    "has_audio": true,
+    "has_transcript": false,
+    "processed_by_llm": false,
+    "last_modified": "250119_0130",
+    "chunks": []
+  },
+  "summary": null,
+  "chapters": [],
+  "tags": [],
+  "notes": ""
+}

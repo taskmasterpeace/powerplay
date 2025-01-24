@@ -1,0 +1,29 @@
+[00:00] Speaker 1: All right.
+[00:00] Speaker 1: So.
+[00:00] Speaker 1: There's an issue.
+[00:00] Speaker 1: After I select the folder.
+[00:00] Speaker 1: On the calendar view.
+[00:00] Speaker 1: And then I go to all files.
+[00:00] Speaker 1: You kind of have to go through a lot in order.
+[00:00] Speaker 1: To get it to show the date.
+[00:00] Speaker 1: If you double click it once.
+[00:00] Speaker 1: It'll bring up the date.
+[00:00] Speaker 1: But then.
+[00:00] Speaker 1: It's hard to tell because it kind of freezes up, so.
+[00:00] Speaker 1: I can't tell if it's about to.
+[00:00] Speaker 1: Load.
+[00:00] Speaker 1: The media player or go to the date.
+[00:00] Speaker 1: And I think I want to be able to have it so you can right click and do that. All right, let's see what this play button does.
+[00:00] Speaker 1: Okay, so when I play.
+[00:00] Speaker 1: It's something that, with the media player, whenever.
+[00:00] Speaker 1: I try to play it.
+[00:00] Speaker 1: It just keeps repeating.
+[00:00] Speaker 1: The first two words, it just keeps looping.
+[00:00] Speaker 1: So I don't know what's going on.
+[00:00] Speaker 1: Let's see. And when I'm hitting f twelve, it's not giving me. The chunk that it should.
+
+
+Transcript saved: D:\github\meetng\audio_files\recordings\250120\250120_2017_test_transcript.txt
+
+Recording saved: D:\github\meetng\audio_files\recordings\250120\250120_2017_test.mp3
+

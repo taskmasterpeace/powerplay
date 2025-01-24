@@ -1,0 +1,11 @@
+[00:00] Speaker 1: It. All right, so this is a cool little test. Okay, so I'm going to change. It to ten.
+[00:00] Speaker 1: Wow. Okay.
+[00:00] Speaker 1: So it did it. So I'm going to hit a twelve again, see if it respects it.
+[00:00] Speaker 1: No, it is not. Respective tongue.
+[00:00] Speaker 1: 45.
+[00:00] Speaker 1: So I got on 45 seconds now, so it should actually ride out, but I'm going. To say. Fuck it. I'm going to hit f twelve.
+[00:00] Speaker 1: All right, so now I hit f twelve. It's supposed to chunk up now.
+[00:00] Speaker 1: Just pull the trunk up now, and it's not chunking up.
+[00:00] Speaker 1: It's not sending a chunk over. It's still waiting.
+[00:00] Speaker 1: That's the problem.
+

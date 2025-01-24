@@ -1,0 +1,76 @@
+[00:00] Speaker 1: All right.
+[00:00] Speaker 1: So.
+[00:00] Speaker 1: What it's not doing right now.
+[00:00] Speaker 1: Is.
+[00:00] Speaker 1: With the chunk for instant processing.
+[00:00] Speaker 1: I feel like f twelve isn't instantly processing it.
+[00:00] Speaker 1: It also doesn't reflect on the timer.
+[00:00] Speaker 1: So when you press f twelve, no matter what the timer is, the timer doesn't do. Anything.
+[00:00] Speaker 1: And it doesn't chunk up.
+[00:00] Speaker 1: So it actually did something. No, it actually did not. It did not. It doesn't, chunk. Up. It doesn't respect f twelve, right?
+[00:00] Speaker 1: And.
+[00:00] Speaker 1: While it's gone. Right now I got it going at 20 seconds, right? So ideally, if I would have set it down to.
+[00:00] Speaker 1: 5 seconds. The timer would go down to 5 seconds, and that's where the meter will start.
+[00:00] Speaker 1: And it does look like it speeds up a little bit.
+[00:00] Speaker 1: But the little timer doesn't look like it doesn't start at five like the middle doesn't say five.
+[00:00] Speaker 1: So I got it at five. Right now I'm looking at it.
+[00:00] Speaker 1: And it starts at like nine or something like that.
+[00:00] Speaker 1: It stays as.
+[00:00] Speaker 1: Zero. Then it goes all the way to nine.
+[00:00] Speaker 1: And 8765-4321 and it goes all around. So something up with that, right?
+[00:00] Speaker 1: Let me see. But is it respecting it? Is it checking it up in five second intervals?
+[00:00] Speaker 1: I can't relate. Let me see.
+[00:00] Speaker 1: It's still going right now. I know it is still going. A lot is still going.
+[00:00] Speaker 1: So once it's going 1234.
+[00:00] Speaker 1: Five.
+[00:00] Speaker 1: One, two, three.
+[00:00] Speaker 1: One, two.
+[00:00] Speaker 1: Three, four.
+[00:00] Speaker 1: Five.
+[00:00] Speaker 1: One, two.
+[00:00] Speaker 1: Three.
+[00:00] Speaker 1: Four, five.
+[00:00] Speaker 1: One.
+[00:00] Speaker 1: Sip.
+[00:00] Speaker 1: Four Mississippi.
+[00:00] Speaker 1: One Mississippi, two Mississippi. Mississippi. From Mississippi. Mississippi.
+[00:00] Speaker 1: Mississippi, two Mississippi, three Mississippi, pro Mississippi, five Mississippi.
+[00:00] Speaker 1: War. Mississippi. Two Mississippi. Mississippi. From Mississippi, five Mississippi.
+[00:00] Speaker 1: All right, so it looks like it's respecting that. Once it went to five Mississippi, so. Now I'm going to take it to ten.
+[00:00] Speaker 1: So now it's at 10 seconds. One Mississippi, two Mississippi, three Mississippi, four Mississippi, five Mississippi. Six Mississippi, South Mississippi, eight Mississippi land, Mississippi, ten Mississippi.
+[00:00] Speaker 1: Mississippi twelve Mississippi, 13 Mississippi, 14 Mississippi, 15 Mississippi. Six Ms. City 7th, 18 Mississippi 19 Mississippi 20. Mississippi. All right, so that was 20. Don't go on.
+[00:00] Speaker 1: 234-2526.
+[00:00] Speaker 1: Seven, eight.
+[00:00] Speaker 1: 29.
+[00:00] Speaker 1: 30.
+[00:00] Speaker 1: One.
+[00:00] Speaker 1: 32.
+[00:00] Speaker 1: Five, six.
+[00:00] Speaker 1: Seven.
+[00:00] Speaker 1: 8940. All right, so we got all those numbers, and they should be chunked up nice. And good.
+[00:00] Speaker 1: All right, so now it's funked up.
+[00:00] Speaker 1: A little bit of salt. There's going to be a lot of silence in the meeting. Right.
+[00:00] Speaker 1: Let's see what our time looked like.
+[00:00] Speaker 1: I can't tell if it worked or not.
+[00:00] Speaker 1: So.
+[00:00] Speaker 1: I want to say that it does respect it. And it looks like everything respects the visual timer.
+[00:00] Speaker 1: But the visual timer don't show the right numbers that it should show.
+[00:00] Speaker 1: It looks like it only can start at 9 seconds.
+[00:00] Speaker 1: Still only show.
+[00:00] Speaker 1: The silhouette starts at nine.
+[00:00] Speaker 1: Now.
+[00:00] Speaker 1: If I want to hit f twelve right now.
+[00:00] Speaker 1: It should chunk it, but it didn't.
+[00:00] Speaker 1: All right, so, yeah, I did check it right now. So now, still going at the 45 2nd now. It's almost done in 45 seconds.
+[00:00] Speaker 1: All right, so now.
+[00:00] Speaker 1: That was the chunk for the 45 seconds.
+[00:00] Speaker 1: We got that. Wow, that was nice.
+[00:00] Speaker 1: That was really nice. So we got that whole chunk in 45 seconds. So the only thing we don't have now.
+[00:00] Speaker 1: Is it respecting the hotkey?
+[00:00] Speaker 1: That's the only thing that we don't have that it doesn't respect. The hotkeys transcribing good.
+[00:00] Speaker 1: So what do you think, Robert? Oh, I think that it's a good idea. I think. That's a really good idea. I don't even know anymore. I think it's. A good idea, though.
+[00:00] Speaker 1: I do. Oh, that's a great idea. So Robert thinks that's a great idea. What do you think, Tim?
+[00:00] Speaker 1: Okay. All right, man.
+[00:00] Speaker 1: That's dope.
+[00:00] Speaker 1: All right.
+

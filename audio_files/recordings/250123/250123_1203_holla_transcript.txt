@@ -1,0 +1,128 @@
+[00:00] Speaker 1: Yo. All right, so this is a test. I just really want to see if this works.
+[00:00] Speaker 1: It should work. I shouldn't even be questioning it, but here I am.
+[00:00] Speaker 1: And we're going to start doing some manual chunking.
+[00:00] Speaker 1: I press f twelve.
+[00:00] Speaker 1: All right. Oh, wow. It chunked up. Chunked up. Chunked up.
+[00:00] Speaker 1: Okay now.
+[00:00] Speaker 1: I am going to f twelve it again.
+[00:00] Speaker 1: All right, so as I'm talking, I'm noticing that the transcript is not appearing. On screen.
+[00:00] Speaker 1: As quickly as I would like.
+[00:00] Speaker 1: Okay, now it's doing that. So what I want to do is.
+[00:00] Speaker 1: Press f twelve right before, right after I speak and right before it actually pops up on screen.
+[00:00] Speaker 1: So what I'm going to do is I'm going to.
+[00:00] Speaker 1: Say?
+[00:00] Speaker 1: I'm going to press f twelve after I say 1023.
+[00:00] Speaker 1: I woke up real early and I took my shower. I had a prearranged day. In about an hour. I woke up at the clock and it was 1023, so I got a cone, picked my fate. And then I brushed my teeth. I opened the closet and threw on some clothes through on the valley booths and ate some cheerios.
+[00:00] Speaker 1: All right, so what I noticed is.
+[00:00] Speaker 1: When I press f twelve.
+[00:00] Speaker 1: So this doesn't do word transcription, it does sentences.
+[00:00] Speaker 1: So there's that.
+[00:00] Speaker 1: And when I press.
+[00:00] Speaker 1: F twelve.
+[00:00] Speaker 1: Wait a minute. Hold on, hold on.
+[00:00] Speaker 1: They don't look it sent that chunk over. The most recent chunk.
+[00:00] Speaker 1: It's kind of odd. Okay, so I'm just in the latest chunk over.
+[00:00] Speaker 1: All right, so we got the new chunk.
+[00:00] Speaker 1: Yeah. Okay, so it never really took the first chunk. That's a little odd. All right. So now that I'm talking, I'm talking. I'm talking. I'm. Going to say? 1234-5678 910, 1112.
+[00:00] Speaker 1: All right, so it did process the new chunk when I pressed it.
+[00:00] Speaker 1: And what I need to do is.
+[00:00] Speaker 1: I need to come up with a way to test this out for a demo to be able to show it off.
+[00:00] Speaker 1: So I think maybe.
+[00:00] Speaker 1: I need.
+[00:00] Speaker 1: A good meeting, maybe.
+[00:00] Speaker 1: So it's still record now. I haven't said anything in a while.
+[00:00] Speaker 1: But now I'm going to go ahead and f twelve it. And once I f twelve. It.
+[00:00] Speaker 1: 's actually so when I have twelve, it's only going to f. Twelve. What's? On the screen, I mean.
+[00:00] Speaker 1: It's only going to allow me to, allow me to chunk what's on the screen.
+[00:00] Speaker 1: So what I need to do is.
+[00:00] Speaker 1: I need to figure out.
+[00:00] Speaker 1: A way to take care of that. Also, I'm getting this, like, speaker one thing in my live transcription. I need to somehow fix that, and I'm going to go ahead and chunk it out.
+[00:00] Speaker 1: And I should get a written down.
+[00:00] Speaker 1: So now I chunked out, so I hit it.
+[00:00] Speaker 1: And it also gave me that written down part, so that's pretty cool. So now it's chunked out.
+[00:00] Speaker 1: I got that chomp.
+[00:00] Speaker 1: This is pretty dope.
+[00:00] Speaker 1: This is pretty dope. This is pretty dope.
+[00:00] Speaker 1: So I think we're done now.
+[00:00] Speaker 1: So this is how the chunks look.
+[00:00] Speaker 1: And.
+[00:00] Speaker 1: It's on manual right now, so this is pretty cool. This is pretty cool.
+[00:00] Speaker 1: So I need to.
+[00:00] Speaker 1: Have something.
+[00:00] Speaker 1: Like, right now.
+[00:00] Speaker 1: I need to get the Ui right.
+[00:00] Speaker 1: But.
+[00:00] Speaker 1: I think we probably need, like, a timer.
+[00:00] Speaker 1: To show.
+[00:00] Speaker 1: When the last chunk was sent.
+[00:00] Speaker 1: Because right now we have it on manual and there is no camera or nothing, so it's, difficult to see when the last trunk was sent.
+[00:00] Speaker 1: Then again, that may not be important. I don't know if I want to display.
+[00:00] Speaker 1: The chunks that the aics or just see the AI response.
+[00:00] Speaker 1: If you could explain.
+[00:00] Speaker 1: The theory of what you're doing.
+[00:00] Speaker 1: How you're going to do it.
+[00:00] Speaker 1: And what you expect.
+[00:00] Speaker 1: Talk about the EU because you mentioned specifically that I have also had a lot of.
+[00:00] Speaker 1: Friend.
+[00:00] Speaker 1: They attribute. And congratulations, Steve.
+[00:00] Speaker 1: And what you expect the outcome to be.
+[00:00] Speaker 1: I'd appreciate it.
+[00:00] Speaker 1: Well, thank you very much. And congratulations, Steve. You're a friend of mine, but on a great career. You have had an amazing career and continues. Okay, so I need to test the time. Between.
+[00:00] Speaker 1: I need to time some of these things and get.
+[00:00] Speaker 1: Some baseline times. All right? So right now.
+[00:00] Speaker 1: I'm going to count one Mississippi, two Mississippi, and then I'm going to hit f five at five Mississippi. And then I want to see what I see on screen. One Mississippi. Two Mississippi, three Mississippi.
+[00:00] Speaker 1: All right, let me get a chunk. Let me chunk it out. That was just a little test. So it looks like whenever I get to the sentence right. So one Mississippi, two Mississippi, three Mississippi. Four Mississippi, five Mississippi, six Mississippi, seven Mississippi, eight Mississippi, nine Mississippi, ten Mississippi, eleven Mississipp.
+[00:00] Speaker 1: Mississippi. Twelve Mississippi, 13 Mississippi, 14 Mississippi, 15 Mississippi, 60 Mississippi, 17 Mississippi, 18 Mississippi. Now Mississippi.
+[00:00] Speaker 1: To eleven Mississippi, one Mississippi, two Mississippi, three Mississippi, four Mississippi, five Mississippi, six Mississippi, seven Mississippi, eight. Mississippi, nine Mississippi, ten Mississippi, eleven Mississippi, twelve Mississippi, 13 Mississippi, 14 Mississippi, 15 Mississippi.
+[00:00] Speaker 1: 16 Mississippi, 17 Mississippi, 18 Mississippi, one Mississippi, two Mississippi, three Mississippi, four Mississippi, five Mississippi, six Mississippi. Seven, Mississippi, eight, Mississippi, nine Mississippi, Tim, Mississippi, eleven, Mississippi, twelve, Mississippi, 13 Mississippi, 14 Mississippi, 15.
+[00:00] Speaker 1: Mississippi, 16 Mississippi, 17 Mississippi, 18 Mississippi, 19 Mississippi. All right, so it looks like regardless of.
+[00:00] Speaker 1: What you're saying. It looks like it'll stop every 15 seconds, right? So let me. Go ahead and test that out.
+[00:00] Speaker 1: Let me bring up the clock.
+[00:00] Speaker 1: Set the timer or stopwatch, and I'm just going to try to just.
+[00:00] Speaker 1: Say something over and over and see what happens.
+[00:00] Speaker 1: All right, so I'm going to chunk that. And here we go.
+[00:00] Speaker 1: I woke up real early and I took my shower. I had a prearranged day. In about an hour. I looked up at the clock and it was 1023. So I got a cone. Actually, let me stop that. I don't think I timed it right.
+[00:00] Speaker 1: That took a long time for me to stop talking and get something on screen, so it's. A little inconsistent with the time that I stopped talking and it transcribes at least that's what it appears so far.
+[00:00] Speaker 1: All right, so what I'm going to do is I'm going to time it. From the time that I stopped talking to the time that it appears on screen.
+[00:00] Speaker 1: And.
+[00:00] Speaker 1: I just want to, all right?
+[00:00] Speaker 1: That time, it appeared really fast, so I don't understand.
+[00:00] Speaker 1: How it's determined, so we're going to go right now.
+[00:00] Speaker 1: All right, so that was 3 seconds for that time. All right, so we're going to keep talking. 123-4567 819. Eleven to a 13.
+[00:00] Speaker 1: That was 2.3 seconds. All right, so we're going to try again. 123-4567 819. 11, 12, 13, 40, 15, 16, 17, 18. 1920.
+[00:00] Speaker 1: That was 2.7 seconds.
+[00:00] Speaker 1: We're going to try it again and we're going to start the timer at ten 1234-5678 910.
+[00:00] Speaker 1: That was 2.45 seconds.
+[00:00] Speaker 1: All right, let's do one more time. 123-4567 819. 1112. 13 1415, 1678 to 1920.
+[00:00] Speaker 1: 10 seconds.
+[00:00] Speaker 1: 10 seconds.
+[00:00] Speaker 1: That's not good. 10.8 seconds. That's not good at all.
+[00:00] Speaker 1: And it wasn't that much.
+[00:00] Speaker 1: To transcribe. That's what I understand. Sometimes it's really short, sometimes it's really long. So now we're going to try that again.
+[00:00] Speaker 1: Less than two and a half seconds. All right, so let's try it one more time.
+[00:00] Speaker 1: All right, that's less than 2 seconds. 1.7. And we're going to. Try one last time.
+[00:00] Speaker 1: 2.43 seconds. And we want to see what time it is. And 123-4567.
+[00:00] Speaker 1: All right.
+[00:00] Speaker 1: Yeah. So it looks like we averaging about 3 seconds.
+[00:00] Speaker 1: Sometimes it goes up to 10 seconds.
+[00:00] Speaker 1: Let me see. What else testing do I need to do?
+[00:00] Speaker 1: I don't know. I think I might be good.
+[00:00] Speaker 1: Thank John Henry, my nigga.
+[00:00] Speaker 1: You get cooked?
+[00:00] Speaker 1: Versus st. John henry.
+[00:00] Speaker 1: Yo, these niggas stopped me from being able to reply.
+[00:00] Speaker 1: In honor of craving.
+[00:00] Speaker 1: Posters.
+[00:00] Speaker 1: What the f.
+[00:00] Speaker 1: Fuck.
+[00:00] Speaker 1: What the fuck?
+[00:00] Speaker 1: Shan has ordered the national institute.
+[00:00] Speaker 1: Why was it doing this?
+[00:00] Speaker 1: All right.
+[00:00] Speaker 1: Pitfalls.
+[00:00] Speaker 1: You by every dream that I kept.
+[00:00] Speaker 1: Wait.
+[00:00] Speaker 1: All right? This is for me and my mother fucking.
+[00:00] Speaker 1: Compliment. None of us.
+[00:00] Speaker 1: Here was my meeting. I want you to access my personal assistant. Give me everything I need from this.
+

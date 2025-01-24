@@ -1,0 +1,76 @@
+[00:00] Speaker 1: Yo, this is test.
+[00:00] Speaker 1: This thing out. One, two, three.
+[00:00] Speaker 1: So, yeah, this thing goes on.
+[00:00] Speaker 1: Then it should really keep track of what we got going on.
+[00:00] Speaker 1: And I noticed that it did stop there.
+[00:00] Speaker 1: Okay. Why isn't that chunk going over?
+[00:00] Speaker 1: That was a long time.
+[00:00] Speaker 1: All right, so I really want to test this thing out now.
+[00:00] Speaker 1: It's almost done. It's almost done. And it's done now. And now. I should be recording the next one. I don't even know if it's like. Getting me right now.
+[00:00] Speaker 1: So I got that one.
+[00:00] Speaker 1: It was kind of getting a little more than the chunk it looked like.
+[00:00] Speaker 1: That's kind of cool. All right.
+[00:00] Speaker 1: I need to figure out a way to test this out. All right, so now the timer is. Not going right now. I don't know what's going on. It's not. Going, and it's still not going. I'm still talking, but it's not. Going?
+[00:00] Speaker 1: I don't know why it's not gone and it's going now.
+[00:00] Speaker 1: And that was an unusually.
+[00:00] Speaker 1: Amount, usually long amount of time. I'm going to hit f twelve. Nothing's happening. It doesn't seem to respect it.
+[00:00] Speaker 1: I'm going to say one, two, three. Then I hit f twelve.
+[00:00] Speaker 1: And then respect it. It doesn't look like and actually did respect it, but the timer. Didn't respect it, so they keep going.
+[00:00] Speaker 1: Yeah.
+[00:00] Speaker 1: So f twelve looks like it doesn't.
+[00:00] Speaker 1: It respects the transaction, but not the AI, not the chunking. That's what it looks. Like, but, like, right now, the timer is not moving.
+[00:00] Speaker 1: Oh, I think it doesn't want to cut me off on talking. Maybe that's it? I don't know.
+[00:00] Speaker 1: I really need to troubleshoot this.
+[00:00] Speaker 1: Let me ask big Dog to help me out.
+[00:00] Speaker 1: This taking a long time to respond all of a sudden.
+[00:00] Speaker 1: What is going on?
+[00:00] Speaker 1: Oh, the chunks. So there's something going on. I can't really describe it.
+[00:00] Speaker 1: All right, so as I talk.
+[00:00] Speaker 1: So I'm talking right now, and it looks like it might be waiting until the end. Of a sentence, maybe, but I can't really tell, so I'm just going to. Keep talking as if I'm talking onto a run on sentence. And if I talk onto a wrong sentence. Does it look like it's going to really cut off that? Does it?
+[00:00] Speaker 1: And if it does, then we got to know what the answer is. Well, I don't. Even know if it'll cut off, but.
+[00:00] Speaker 1: It looks like it might cut off. And if it does cough, then we'll know that. It cuts off, right?
+[00:00] Speaker 1: So we're going to just go from there, and then we'll just go from there and we'll just keep it going on and then we'll go from there. We'll go from there and we'll just keep it going off from there, right?
+[00:00] Speaker 1: Okay, so I'm understanding how it works now.
+[00:00] Speaker 1: So it looks like AssemblyAI can't cut off.
+[00:00] Speaker 1: It looks like it can't cut off until the sentence.
+[00:00] Speaker 1: So it won't cut off a sentence unless you stop talking.
+[00:00] Speaker 1: So when I hit f twelve now.
+[00:00] Speaker 1: If I go on and I talk, I hit f twelve.
+[00:00] Speaker 1: And then keep going. And as I keep going, I keep talking and keep talking.
+[00:00] Speaker 1: Yeah. F twelve is not chunking it. Then f twelve is not chunking.
+[00:00] Speaker 1: It and the timer is not starting.
+[00:00] Speaker 1: This thing is pretty fucking awesome. So it basically only starts when it starts.
+[00:00] Speaker 1: Does it.
+[00:00] Speaker 1: At least it looks right.
+[00:00] Speaker 1: So the timer is actually starting from the second.
+[00:00] Speaker 1: I can't tell if it's respecting it or not. Okay, let me just.
+[00:00] Speaker 1: See.
+[00:00] Speaker 1: All right. Green, green. Seven, six, five.
+[00:00] Speaker 1: Four, three, two.
+[00:00] Speaker 1: 10.
+[00:00] Speaker 1: Gray. Still gray. 98765.
+[00:00] Speaker 1: Four, three, two.
+[00:00] Speaker 1: One, two, one.
+[00:00] Speaker 1: Zero is still great. Gray. Gray. 987653.
+[00:00] Speaker 1: Two, one.
+[00:00] Speaker 1: One. One.
+[00:00] Speaker 1: Zero.
+[00:00] Speaker 1: Great.
+[00:00] Speaker 1: Only turning gray for, like, a second.
+[00:00] Speaker 1: This thing is pretty freaking cool.
+[00:00] Speaker 1: This thing is pretty freaking cool.
+[00:00] Speaker 1: All right, so it just chunks over.
+[00:00] Speaker 1: So it chunks over.
+[00:00] Speaker 1: That it chomps over the.
+[00:00] Speaker 1: Wow. Okay.
+[00:00] Speaker 1: All right, so this is at 7 seconds. I'm hitting f. Twelve. 54321.
+[00:00] Speaker 1: Zero, boom.
+[00:00] Speaker 1: So f twelve is not doing it, Daniel.
+[00:00] Speaker 1: Is not doing that. So I'm going to change the time.
+[00:00] Speaker 1: To 20 seconds.
+[00:00] Speaker 1: Now it's going much slow.
+[00:00] Speaker 1: Actually, the time didn't.
+[00:00] Speaker 1: So it's going 27. Suppose it's a little 22nd.
+[00:00] Speaker 1: I just changed the 20 seconds, but the timer is not starting that 22nd.
+[00:00] Speaker 1: The timer is not respecting the other tongue, and it's sending a whole chunk and I don't even know where it's at right now because I don't see the timer going.
+

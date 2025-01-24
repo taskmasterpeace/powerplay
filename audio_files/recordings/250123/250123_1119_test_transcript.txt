@@ -1,0 +1,8 @@
+[00:00] Speaker 1: All right, so we're recording now and what we're trying to do.
+[00:00] Speaker 1: Is we're trying to test out the trunking. We want to know if the chunking.
+[00:00] Speaker 1: Will not create.
+[00:00] Speaker 1: Until we hit the key.
+[00:00] Speaker 1: And I'm going to hit the key right now. So I hit the key, I chunked. It up. I got an overflow error, but it still worked.
+[00:00] Speaker 1: All right, that's a little odd, and I'm going to copy the error.
+[00:00] Speaker 1: In.
+
