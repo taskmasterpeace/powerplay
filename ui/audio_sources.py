@@ -398,28 +398,38 @@ class RecordingFrame(ttk.Frame):
         
     def stop_recording(self):
         """Stop recording and cleanup resources"""
-        # Stop processing first
-        self.transcribing = False
-        self.recording = False
-        
-        # Wait for processing thread to complete (with timeout)
-        start_time = time.time()
-        while hasattr(self, 'assemblyai_session') and time.time() - start_time < 2:
-            time.sleep(0.1)
-        
-        # Stop recording
-        audio_data = None
-        if hasattr(self, 'recorder'):
-            audio_data = self.recorder.stop()
+        try:
+            # Disable UI elements first
+            self.record_btn.configure(state=tk.DISABLED)
+            self.update()  # Force UI update
             
-        # Clean up websocket connection
-        if hasattr(self, 'assemblyai_session'):
-            try:
-                self.assemblyai_session.stop()
-            except Exception as e:
-                print(f"Error stopping AssemblyAI session: {e}")
-            finally:
-                delattr(self, 'assemblyai_session')
+            # Set flags to stop processing
+            self.transcribing = False
+            self.recording = False
+            
+            # Stop audio recording first
+            audio_data = None
+            if hasattr(self, 'recorder'):
+                try:
+                    audio_data = self.recorder.stop()
+                    delattr(self, 'recorder')
+                except Exception as e:
+                    print(f"Error stopping recorder: {e}")
+            
+            # Stop AssemblyAI session with timeout
+            if hasattr(self, 'assemblyai_session'):
+                try:
+                    stop_thread = threading.Thread(
+                        target=self._stop_assemblyai_session,
+                        daemon=True
+                    )
+                    stop_thread.start()
+                    stop_thread.join(timeout=2.0)  # Wait up to 2 seconds
+                except Exception as e:
+                    print(f"Error in AssemblyAI cleanup: {e}")
+                finally:
+                    if hasattr(self, 'assemblyai_session'):
+                        delattr(self, 'assemblyai_session')
             
         # Update metadata with markers
         if hasattr(self, 'metadata'):
@@ -453,9 +463,12 @@ class RecordingFrame(ttk.Frame):
                 
             self.transcript_text.insert('end', f"\nRecording saved: {saved_path}\n")
             
-        self.recording = False
-        self.transcribing = False
-        self.record_btn.configure(text="Start Recording")
+        # Re-enable and update UI
+        self.record_btn.configure(
+            text="Start Recording",
+            state=tk.NORMAL
+        )
+        self.update()  # Force final UI update
         
     def update_timer(self):
         if self.recording:
@@ -464,6 +477,14 @@ class RecordingFrame(ttk.Frame):
             seconds = elapsed % 60
             self.time_label.configure(text=f"{minutes:02d}:{seconds:02d}")
             self.after(1000, self.update_timer)
+            
+    def _stop_assemblyai_session(self):
+        """Helper method to stop AssemblyAI session in a separate thread"""
+        try:
+            if hasattr(self, 'assemblyai_session'):
+                self.assemblyai_session.stop()
+        except Exception as e:
+            print(f"Error stopping AssemblyAI session: {e}")
             
     def update_dual_indicator(self):
         """Update the dual-purpose indicator during recording"""
