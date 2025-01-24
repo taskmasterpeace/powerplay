@@ -433,16 +433,16 @@ class RecordingFrame(ttk.Frame):
                         
             # Update metadata and save recording
             if hasattr(self, 'metadata'):
-            self.metadata["hotkey_markers"] = [
-                {
-                    "timestamp": f"{int(m['timestamp'] // 60):02d}:{int(m['timestamp'] % 60):02d}",
-                    "key": m['key']
-                } for m in self.markers
-            ]
-            
-            # Save recording with standardized naming
-            current_time = datetime.now()
-            filename = f"{current_time.strftime('%y%m%d_%H%M')}_{self.meeting_name.get()}"
+                self.metadata["hotkey_markers"] = [
+                    {
+                        "timestamp": f"{int(m['timestamp'] // 60):02d}:{int(m['timestamp'] % 60):02d}",
+                        "key": m['key']
+                    } for m in self.markers
+                ]
+                
+                # Save recording with standardized naming
+                current_time = datetime.now()
+                filename = f"{current_time.strftime('%y%m%d_%H%M')}_{self.meeting_name.get()}"
             saved_path = self.app.file_handler.save_recording(
                 audio_data, 
                 filename,
