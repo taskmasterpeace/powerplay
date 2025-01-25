@@ -84,6 +84,12 @@ class AudioPlayer:
         self._error_message = ""
         self._playback_start_time = 0
         self._playback_start_position = 0
+        
+    def _set_state(self, new_state):
+        """Wrapper for state changes with logging"""
+        with self._state_lock:
+            self.logger.debug(f"State change: {self._state} -> {new_state}")
+            self._state = new_state
 
     def load(self, file_path):
         """Load an audio file using pydub."""
@@ -320,7 +326,7 @@ class MediaPlayerFrame(ttk.LabelFrame):
         
         # Top section - Waveform and controls
         self.top_frame = ttk.Frame(self.main_container)
-        self.main_container.add(self.top_frame, weight=1)
+        self.main_container.add(self.top_frame, weight=1, stretch='always')
         
         # Playback controls
         self.controls_frame = ttk.Frame(self.top_frame)
@@ -338,8 +344,9 @@ class MediaPlayerFrame(ttk.LabelFrame):
         self.time_label = ttk.Label(self.controls_frame, textvariable=self.time_var)
         self.time_label.pack(side=tk.RIGHT, padx=5)
         
-        self.position_slider = ttk.Scale(self.controls_frame, from_=0, to=100, 
-                                       orient=tk.HORIZONTAL, command=self.seek_position)
+        self.position_slider = tk.Scale(self.controls_frame, from_=0, to=100,
+                                      orient=tk.HORIZONTAL, showvalue=0,
+                                      command=self.seek_position)
         self.position_slider.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
         
         # Add drag tracking to slider
@@ -400,6 +407,21 @@ class MediaPlayerFrame(ttk.LabelFrame):
         # Audio playback state
         self.audio_file = None
         self.update_id = None
+        
+        # Setup key bindings
+        self._setup_bindings()
+        
+    def _setup_bindings(self):
+        """Initialize key bindings"""
+        self.bind_all('<<PlaybackComplete>>', lambda e: self._on_playback_complete())
+        self.position_slider.bind('<ButtonRelease-1>', lambda e: self._slider_released())
+        
+    def _slider_released(self):
+        """Handle slider release event"""
+        self.position_slider._dragging = False
+        if self.audio_file:
+            position = (float(self.position_slider.get()) / 100) * self.duration
+            self.audio_player.seek(position)
 
         
     def setup_ui(self):
