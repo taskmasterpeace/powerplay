@@ -111,14 +111,31 @@ class AudioPlayer:
             
         with self._lock:
             try:
+                # Validate position
+                new_position = max(0, min(position, self.duration))
+                if abs(new_position - self._position) < 0.1:  # Avoid tiny seeks
+                    return True
+                    
+                # Store playback state
                 was_playing = self._state == PlaybackState.PLAYING
+                
+                # Update position and cleanup
                 self._cleanup_playback()
-                self._position = max(0, min(position, self.duration))
+                self._position = new_position
+                self._playback_start_position = new_position
+                self._playback_start_time = time.time()
+                
+                # Resume if was playing
                 if was_playing:
                     return self.play()
+                    
+                self._state = PlaybackState.PAUSED
                 return True
+                
             except Exception as e:
                 print(f"Seek error: {e}")
+                self._state = PlaybackState.ERROR
+                self._error_message = str(e)
                 return False
 
     def _cleanup_playback(self):
