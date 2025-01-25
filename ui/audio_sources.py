@@ -231,6 +231,15 @@ class RecordingFrame(ttk.Frame):
         self.transcript_frame = ttk.LabelFrame(self.split_frame, text="Live Transcription")
         self.split_frame.add(self.transcript_frame, weight=1)
         
+        # Transcript header frame
+        transcript_header = ttk.Frame(self.transcript_frame)
+        transcript_header.pack(fill=tk.X, padx=5, pady=2)
+        
+        # Add copy button to transcript
+        self.copy_transcript_btn = ttk.Button(transcript_header, text="📋 Copy", 
+            command=lambda: self.copy_to_clipboard(self.transcript_text))
+        self.copy_transcript_btn.pack(side=tk.RIGHT)
+        
         self.transcript_text = tk.Text(self.transcript_frame, 
                                      wrap=tk.WORD,
                                      background='#f0f0f0',  # Light gray background
