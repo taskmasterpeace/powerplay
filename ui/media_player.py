@@ -35,7 +35,8 @@ class AudioPlayer:
         self.duration = 0
         self._volume = 1.0
         self._position = 0
-        self._lock = threading.Lock()
+        self._playback_lock = threading.RLock()  # Reentrant lock for playback operations
+        self._state_lock = threading.Lock()      # Separate lock for state changes
         self._state = PlaybackState.IDLE
         self._error_message = ""
         self._playback_start_time = 0
@@ -59,57 +60,47 @@ class AudioPlayer:
     def play(self):
         """Play or resume playback with proper resource management"""
         self.logger.debug(f"Play requested. Current state: {self._state}")
-        if self._state == PlaybackState.IDLE or not self.audio_segment:
-            self.logger.warning("Cannot play: No audio loaded or player idle")
-            return False
-
-        with self._lock:
-            self.logger.debug(f"Starting playback from position: {self._position}s")
-            # Verify we're in a valid state to start playback
+        
+        with self._state_lock:
+            if self._state == PlaybackState.IDLE or not self.audio_segment:
+                self.logger.warning("Cannot play: No audio loaded or player idle")
+                return False
+                
+            if self._state == PlaybackState.PLAYING:
+                self.logger.debug("Already playing, ignoring play request")
+                return True  # Already playing is not an error
+                
             if self._state not in [PlaybackState.LOADED, PlaybackState.PAUSED]:
                 self.logger.error(f"Invalid state for playback: {self._state}")
                 return False
-            if self._state == PlaybackState.PLAYING:
-                return False
                 
             try:
-                # Clean up any existing playback but preserve state
-                was_playing = self._state == PlaybackState.PLAYING
-                current_pos = self.get_position() if was_playing else self._position
-                self._cleanup_playback(preserve_state=True)
-                
-                # Calculate remaining audio
-                start_ms = int(self._position * 1000)
-                if start_ms >= len(self.audio_segment):
-                    return False
+                with self._playback_lock:
+                    # Calculate remaining audio
+                    start_ms = int(self._position * 1000)
+                    if start_ms >= len(self.audio_segment):
+                        self.logger.debug("At end of audio, cannot play")
+                        return False
+                        
+                    # Prepare audio segment
+                    audio_to_play = self.audio_segment[start_ms:]
+                    if self._volume != 1.0:
+                        audio_to_play = audio_to_play.apply_gain(20 * np.log10(max(self._volume, 0.0001)))
                     
-                # Prepare audio segment
-                audio_to_play = self.audio_segment[start_ms:]
-                if self._volume != 1.0:
-                    audio_to_play = audio_to_play.apply_gain(20 * np.log10(max(self._volume, 0.0001)))
-                
-                # Start playback
-                self._state = PlaybackState.PLAYING  # Set state BEFORE starting playback
-                self.logger.debug(f"Setting state to PLAYING before starting playback")
-                
-                self.playback = _play_with_simpleaudio(audio_to_play)
-                if not self.playback:
-                    self.logger.error("Failed to create playback object")
-                    self._state = PlaybackState.LOADED  # Reset state on failure
-                    return False
-                
-                # Verify playback started
-                if not self.playback.is_playing():
-                    self.logger.error("Playback object created but not playing")
-                    self._state = PlaybackState.LOADED  # Reset state on failure
-                    self._cleanup_playback()
-                    return False
-                
-                # Record start time and position
-                self._playback_start_time = time.time()
-                self._playback_start_position = self._position
-                self.logger.debug(f"Playback confirmed started, state is: {self._state}")
-                return True
+                    # Create playback object
+                    new_playback = _play_with_simpleaudio(audio_to_play)
+                    if not new_playback or not new_playback.is_playing():
+                        self.logger.error("Failed to create playing playback object")
+                        return False
+                        
+                    # Only after successful playback creation, update state and references
+                    self._state = PlaybackState.PLAYING
+                    self.playback = new_playback
+                    self._playback_start_time = time.time()
+                    self._playback_start_position = self._position
+                    
+                    self.logger.debug(f"Playback successfully started, state: {self._state}")
+                    return True
                 
             except Exception as e:
                 print(f"Playback error: {e}")
@@ -427,36 +418,36 @@ class MediaPlayerFrame(ttk.LabelFrame):
             messagebox.showerror("Error", "No audio player initialized")
             return
             
-        if self.audio_player.get_state() == PlaybackState.IDLE:
-            self.logger.error("Cannot play: No audio file loaded")
-            messagebox.showerror("Error", "No audio file loaded")
-            return
-
         try:
-            self.logger.debug(f"Current player state: {self.audio_player.get_state()}")
-            if self.audio_player.is_playing():
+            current_state = self.audio_player.get_state()
+            self.logger.debug(f"Current player state: {current_state}")
+            
+            if current_state == PlaybackState.PLAYING:
+                # Handle pause
                 self.logger.info("Pausing playback")
                 if self.audio_player.pause():
                     self.play_button.configure(text="Play")
                     self.cancel_updates()
                     self.logger.info("Playback paused successfully")
-            else:
-                self.logger.info("Starting playback")
-                if self.audio_player.play():
-                    if self.audio_player.get_state() == PlaybackState.PLAYING:
-                        self.play_button.configure(text="Pause")
-                        self.start_playback_updates()
-                        self.logger.info("Playback started successfully")
-                    else:
-                        self.logger.error(f"Invalid state after play: {self.audio_player.get_state()}")
-                        messagebox.showerror("Playback Error", "Failed to enter playing state")
+                return
+                
+            # Handle play
+            self.logger.info("Starting playback")
+            if self.audio_player.play():
+                # Verify state changed
+                if self.audio_player.get_state() == PlaybackState.PLAYING:
+                    self.play_button.configure(text="Pause")
+                    self.start_playback_updates()
+                    self.logger.info("Playback started successfully")
                 else:
-                    self.logger.error("Failed to start playback")
-                    messagebox.showerror("Playback Error", "Failed to start playback")
+                    raise RuntimeError("Failed to enter playing state")
+            else:
+                raise RuntimeError("Failed to start playback")
+                
         except Exception as e:
             self.logger.error(f"Playback error: {str(e)}", exc_info=True)
+            self.audio_player._cleanup_playback()
             messagebox.showerror("Playback Error", str(e))
-            self.audio_player._cleanup_playback()  # Ensure cleanup on error
             
 
             
