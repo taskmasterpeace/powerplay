@@ -106,7 +106,7 @@ class AudioPlayer:
             
         with self._lock:
             try:
-                was_playing = self.playing
+                was_playing = self._state == PlaybackState.PLAYING
                 self._cleanup_playback()
                 self._position = max(0, min(position, self.duration))
                 if was_playing:
@@ -132,7 +132,7 @@ class AudioPlayer:
     
     def get_position(self):
         """Get current playback position in seconds"""
-        if not self.playing:
+        if self._state != PlaybackState.PLAYING:
             return self._position
             
         try:
@@ -162,7 +162,7 @@ class AudioPlayer:
         with self._lock:
             try:
                 self._volume = max(0.0, min(1.0, volume))
-                if self.playing:
+                if self._state == PlaybackState.PLAYING:
                     current_pos = self.get_position()
                     self._cleanup_playback()
                     self._position = current_pos
