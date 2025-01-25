@@ -29,6 +29,7 @@ from pydub.playback import _play_with_simpleaudio
 import threading
 import time
 import logging
+from enum import Enum, auto
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG,
