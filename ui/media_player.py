@@ -246,6 +246,10 @@ class MediaPlayerFrame(ttk.LabelFrame):
                                        orient=tk.HORIZONTAL, command=self.seek_position)
         self.position_slider.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
         
+        # Add drag tracking to slider
+        self.position_slider.bind('<Button-1>', lambda e: setattr(self.position_slider, '_dragging', True))
+        self.position_slider.bind('<ButtonRelease-1>', lambda e: setattr(self.position_slider, '_dragging', False))
+        
         # Volume control
         self.volume_frame = ttk.Frame(self.controls_frame)
         self.volume_frame.pack(side=tk.RIGHT, padx=5)
@@ -398,9 +402,8 @@ class MediaPlayerFrame(ttk.LabelFrame):
         if now - self.seek_update_time > 0.1:  # 100ms throttle
             try:
                 position = (float(value) / 100) * self.audio_player.duration
-                if self.audio_player.seek(position):
-                    self.update_time_display()
                 self.seek_update_time = now
+                self.audio_player.seek(position)
             except Exception as e:
                 print(f"Seek error: {e}")
             
@@ -463,7 +466,10 @@ class MediaPlayerFrame(ttk.LabelFrame):
         current_time = f"{int(position//60):02d}:{int(position%60):02d}"
         total_time = f"{int(self.duration//60):02d}:{int(self.duration%60):02d}"
         self.time_var.set(f"{current_time} / {total_time}")
-        self.position_slider.set((position / self.duration) * 100)
+        
+        # Only update slider if not being dragged
+        if not hasattr(self.position_slider, '_dragging'):
+            self.position_slider.set((position / self.duration) * 100)
 
             
     def _on_playback_complete(self):
