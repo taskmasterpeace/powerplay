@@ -65,6 +65,10 @@ class AudioPlayer:
 
         with self._lock:
             self.logger.debug(f"Starting playback from position: {self._position}s")
+            # Verify we're in a valid state to start playback
+            if self._state not in [PlaybackState.LOADED, PlaybackState.PAUSED]:
+                self.logger.error(f"Invalid state for playback: {self._state}")
+                return False
             if self._state == PlaybackState.PLAYING:
                 return False
                 
@@ -95,6 +99,13 @@ class AudioPlayer:
                 self._playback_start_position = self._position
                 self._state = PlaybackState.PLAYING
                 self.logger.debug(f"Playback started successfully, state updated to: {self._state}")
+                
+                # Verify playback started
+                if not self.playback.is_playing():
+                    self.logger.error("Playback object created but not playing")
+                    self._cleanup_playback()
+                    return False
+                    
                 return True
                 
             except Exception as e:
