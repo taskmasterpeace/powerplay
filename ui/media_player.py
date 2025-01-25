@@ -84,13 +84,20 @@ class AudioPlayer:
 
     def seek(self, position):
         """Seek to a specific position in seconds."""
-        if self.audio_segment:
-            with self.lock:
+        if not self.audio_segment:
+            return False
+            
+        with self._lock:
+            try:
                 was_playing = self.playing
-                self.stop()
-                self.paused_position = position
+                self._cleanup_playback()
+                self._position = max(0, min(position, self.duration))
                 if was_playing:
-                    self.play()
+                    return self.play()
+                return True
+            except Exception as e:
+                print(f"Seek error: {e}")
+                return False
 
     def _cleanup_playback(self):
         """Clean up playback resources"""
@@ -124,13 +131,18 @@ class AudioPlayer:
 
     def set_volume(self, volume):
         """Set playback volume (0.0 to 1.0)."""
-        self._volume = max(0.0, min(1.0, volume))
-        if self.playing:
-            # Restart playback with new volume
-            current_pos = self.get_position()
-            self.stop()
-            self.paused_position = current_pos
-            self.play()
+        with self._lock:
+            try:
+                self._volume = max(0.0, min(1.0, volume))
+                if self.playing:
+                    current_pos = self.get_position()
+                    self._cleanup_playback()
+                    self._position = current_pos
+                    return self.play()
+                return True
+            except Exception as e:
+                print(f"Volume error: {e}")
+                return False
 
 class MediaPlayerFrame(ttk.LabelFrame):
     def __init__(self, master):
@@ -383,8 +395,24 @@ class MediaPlayerFrame(ttk.LabelFrame):
 
     def destroy(self):
         """Cleanup resources before destroying widget"""
-        if self.audio_player:
-            self.audio_player.stop()
-        if self.update_id:
-            self.after_cancel(self.update_id)
-        super().destroy()
+        try:
+            # Cancel all pending updates
+            self.cancel_updates()
+            
+            # Stop audio playback
+            if self.audio_player:
+                self.audio_player.stop()
+                self.audio_player = None
+            
+            # Clear text widgets
+            if hasattr(self, 'transcript_text'):
+                self.transcript_text.delete('1.0', tk.END)
+            
+            # Reset variables
+            self.duration = 0
+            self.current_position = 0
+            
+        except Exception as e:
+            print(f"Cleanup error during destroy: {e}")
+        finally:
+            super().destroy()
