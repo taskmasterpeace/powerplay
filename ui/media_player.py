@@ -257,7 +257,6 @@ class MediaPlayerFrame(ttk.LabelFrame):
         
         # Audio playback state
         self.audio_file = None
-        self.current_position = 0
         self.update_id = None
 
         
@@ -333,11 +332,9 @@ class MediaPlayerFrame(ttk.LabelFrame):
             
         self.audio_player.stop()
         self.play_button.configure(text="Play")
-        self.current_position = 0
         self.position_slider.set(0)
         self.update_time_display()
-        if self.update_id:
-            self.after_cancel(self.update_id)
+        self.cancel_updates()
         
     def _throttled_seek(self, value):
         """Throttle seek operations to prevent overload"""
@@ -387,12 +384,12 @@ class MediaPlayerFrame(ttk.LabelFrame):
                 
             try:
                 if self.audio_player.is_playing():
-                    self.current_position = self.audio_player.get_position()
-                    if self.current_position >= self.audio_player.duration:
+                    position = self.audio_player.get_position()
+                    if position >= self.audio_player.duration:
                         self.master.after_idle(self.stop_audio)
                         return
                     self.update_time_display()
-                    progress = (self.current_position / self.audio_player.duration) * 100
+                    progress = (position / self.audio_player.duration) * 100
                     self.position_slider.set(progress)
                     self.update_id = self.master.after(50, update)
                 else:
@@ -413,19 +410,18 @@ class MediaPlayerFrame(ttk.LabelFrame):
             self.position_slider.set(0)
             return
         
-        current_time = f"{int(self.current_position//60):02d}:{int(self.current_position%60):02d}"
+        position = self.audio_player.get_position()
+        current_time = f"{int(position//60):02d}:{int(position%60):02d}"
         total_time = f"{int(self.duration//60):02d}:{int(self.duration%60):02d}"
         self.time_var.set(f"{current_time} / {total_time}")
-        self.position_slider.set((self.current_position / self.duration) * 100)
+        self.position_slider.set((position / self.duration) * 100)
 
             
     def _on_playback_complete(self):
         """Handle playback completion"""
-        self.playing = False
+        self.audio_player._cleanup_playback()
         self.play_button.configure(text="Play")
-        if self.update_timer_id:
-            self.after_cancel(self.update_timer_id)
-            self.update_timer_id = None
+        self.cancel_updates()
             
     def cancel_updates(self):
         """Cancel any pending updates"""
@@ -450,7 +446,15 @@ class MediaPlayerFrame(ttk.LabelFrame):
             
             # Reset variables
             self.duration = 0
-            self.current_position = 0
+            self.audio_file = None
+            
+            # Clear any remaining state
+            if hasattr(self, 'filename_var'):
+                self.filename_var.set("No file loaded")
+            if hasattr(self, 'time_var'):
+                self.time_var.set("00:00 / 00:00")
+            if hasattr(self, 'position_slider'):
+                self.position_slider.set(0)
             
         except Exception as e:
             print(f"Cleanup error during destroy: {e}")
