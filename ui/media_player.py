@@ -229,6 +229,19 @@ class MediaPlayerFrame(ttk.LabelFrame):
                                        orient=tk.HORIZONTAL, command=self.seek_position)
         self.position_slider.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
         
+        # Volume control
+        self.volume_frame = ttk.Frame(self.controls_frame)
+        self.volume_frame.pack(side=tk.RIGHT, padx=5)
+        
+        self.volume_label = ttk.Label(self.volume_frame, text="Volume:")
+        self.volume_label.pack(side=tk.LEFT)
+        
+        self.volume_slider = ttk.Scale(self.volume_frame, from_=0, to=100,
+                                     orient=tk.HORIZONTAL, length=100,
+                                     command=self.set_volume)
+        self.volume_slider.set(100)
+        self.volume_slider.pack(side=tk.LEFT, padx=5)
+        
         # Bottom section - Transcript
         self.bottom_frame = ttk.Frame(self.main_container)
         self.main_container.add(self.bottom_frame, weight=1)
@@ -295,6 +308,12 @@ class MediaPlayerFrame(ttk.LabelFrame):
     def load_audio_async(self, file_path):
         """Load audio file asynchronously"""
         try:
+            # Validate file type
+            ext = os.path.splitext(file_path)[1].lower()
+            supported_types = {'.mp3', '.wav', '.ogg', '.flac', '.m4a', '.wma'}
+            if ext not in supported_types:
+                raise ValueError(f"Unsupported file type. Supported: {', '.join(supported_types)}")
+            
             self.audio_player.load(file_path)
             self.duration = self.audio_player.duration
             
@@ -308,6 +327,8 @@ class MediaPlayerFrame(ttk.LabelFrame):
         except Exception as e:
             self.filename_var.set(f"Error loading file: {str(e)}")
             print(f"Error loading audio: {str(e)}")
+            self.audio_file = None
+            self.duration = 0
             
     def load_transcript(self, transcript_path):
         """Load transcript file"""
@@ -399,19 +420,17 @@ class MediaPlayerFrame(ttk.LabelFrame):
                 if self.audio_player.is_playing():
                     position = self.audio_player.get_position()
                     if position >= self.audio_player.duration:
-                        self.master.after_idle(self.stop_audio)
+                        self.master.after_idle(self._on_playback_complete)
                         return
                     self.update_time_display()
                     progress = (position / self.audio_player.duration) * 100
                     self.position_slider.set(progress)
                     self.update_id = self.master.after(50, update)
                 else:
-                    self.play_button.configure(text="Play")
-                    self.cancel_updates()
+                    self._on_playback_complete()
             except Exception as e:
                 print(f"Update error: {e}")
-                self.play_button.configure(text="Play")
-                self.cancel_updates()
+                self._on_playback_complete()
                 
         self.cancel_updates()
         self.update_id = self.master.after(50, update)
@@ -442,6 +461,12 @@ class MediaPlayerFrame(ttk.LabelFrame):
             self.after_cancel(self.update_id)
             self.update_id = None
 
+    def set_volume(self, value):
+        """Set audio volume"""
+        if self.audio_player:
+            volume = float(value) / 100.0
+            self.audio_player.set_volume(volume)
+            
     def destroy(self):
         """Cleanup resources before destroying widget"""
         try:
