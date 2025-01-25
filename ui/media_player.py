@@ -376,7 +376,12 @@ class MediaPlayerFrame(ttk.LabelFrame):
             
     def play_audio(self):
         """Toggle play/pause audio playback"""
-        if not self.audio_player or self.audio_player.get_state() == PlaybackState.IDLE:
+        if not self.audio_player:
+            messagebox.showerror("Error", "No audio player initialized")
+            return
+            
+        if self.audio_player.get_state() == PlaybackState.IDLE:
+            messagebox.showerror("Error", "No audio file loaded")
             return
 
         try:
@@ -391,7 +396,9 @@ class MediaPlayerFrame(ttk.LabelFrame):
                 else:
                     messagebox.showerror("Playback Error", "Failed to start playback")
         except Exception as e:
+            print(f"Play error: {str(e)}")  # Add logging
             messagebox.showerror("Playback Error", str(e))
+            self.audio_player._cleanup_playback()  # Ensure cleanup on error
             
 
             
@@ -497,7 +504,7 @@ class MediaPlayerFrame(ttk.LabelFrame):
         
         # Reset position to start
         self.position_slider.set(0)
-        self._position = 0
+        self.audio_player._position = 0
         self.update_time_display()
         
         # Emit completion event
