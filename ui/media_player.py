@@ -9,16 +9,16 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 
 class AudioPlayer:
+    """Handles audio playback with proper resource management"""
+    
     def __init__(self):
         self.audio_segment = None
         self.playback = None
-        self.start_time = 0
-        self.paused_position = 0
         self.duration = 0
         self.playing = False
-        self.lock = threading.Lock()
-        self._last_position = 0
         self._volume = 1.0
+        self._position = 0
+        self._lock = threading.Lock()
 
     def load(self, file_path):
         """Load an audio file using pydub."""
@@ -26,72 +26,61 @@ class AudioPlayer:
         self.duration = len(self.audio_segment) / 1000  # Convert to seconds
 
     def play(self):
-        """Play or resume playback."""
+        """Play or resume playback with proper resource management"""
         if not self.audio_segment:
             return False
 
-        with self.lock:
-            if self.playing and self.playback and self.playback.is_playing():
+        with self._lock:
+            if self.playing:
                 return False
                 
             try:
-                # Ensure clean state
-                if self.playback:
-                    self._last_position = self.get_position()
-                    self.playback.stop()
-                    self.playback = None
-                else:
-                    self._last_position = self.paused_position
-
-                # Calculate start position and create new playback
-                start_ms = int(self._last_position * 1000)
-                end_ms = len(self.audio_segment)
-                if start_ms >= end_ms:
+                # Clean up any existing playback
+                self._cleanup_playback()
+                
+                # Calculate remaining audio
+                start_ms = int(self._position * 1000)
+                if start_ms >= len(self.audio_segment):
                     return False
                     
+                # Prepare audio segment
                 audio_to_play = self.audio_segment[start_ms:]
-                
-                # Apply current volume
                 if self._volume != 1.0:
                     audio_to_play = audio_to_play.apply_gain(20 * np.log10(max(self._volume, 0.0001)))
                 
+                # Start playback
                 self.playback = _play_with_simpleaudio(audio_to_play)
                 if not self.playback:
                     return False
                     
-                self.start_time = time.time() - self._last_position
                 self.playing = True
                 return True
+                
             except Exception as e:
                 print(f"Playback error: {e}")
-                self.playing = False
-                self.playback = None
+                self._cleanup_playback()
                 return False
 
     def pause(self):
-        """Pause playback."""
-        with self.lock:
-            if not self.playing or not self.playback:
+        """Pause playback with proper cleanup"""
+        with self._lock:
+            if not self.playing:
                 return False
                 
             try:
-                self.paused_position = self.get_position()
-                self.playback.stop()
-                self.playback = None
-                self.playing = False
+                self._position = self.get_position()
+                self._cleanup_playback()
                 return True
             except Exception as e:
                 print(f"Pause error: {e}")
+                self._cleanup_playback()
                 return False
 
     def stop(self):
-        """Stop playback and reset position."""
-        if self.playback:
-            with self.lock:
-                self.playback.stop()
-                self.playback = None
-                self.paused_position = 0
-                self.playing = False
+        """Stop playback and reset state"""
+        with self._lock:
+            self._cleanup_playback()
+            self._position = 0
 
     def seek(self, position):
         """Seek to a specific position in seconds."""
@@ -103,11 +92,31 @@ class AudioPlayer:
                 if was_playing:
                     self.play()
 
+    def _cleanup_playback(self):
+        """Clean up playback resources"""
+        if self.playback:
+            try:
+                self.playback.stop()
+            except Exception as e:
+                print(f"Cleanup error: {e}")
+            finally:
+                self.playback = None
+                self.playing = False
+    
     def get_position(self):
-        """Get the current playback position in seconds."""
-        if self.playing and self.playback:
-            return time.time() - self.start_time
-        return self.paused_position
+        """Get current playback position in seconds"""
+        if not self.playing:
+            return self._position
+            
+        try:
+            if self.playback and self.playback.is_playing():
+                # Calculate position based on remaining samples
+                played_ms = len(self.audio_segment) - len(self.playback._audio_segment)
+                return (played_ms / 1000.0) + self._position
+        except Exception as e:
+            print(f"Position error: {e}")
+            
+        return self._position
 
     def is_playing(self):
         """Check if audio is currently playing."""
