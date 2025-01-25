@@ -45,14 +45,21 @@ class PlaybackState(Enum):
     - PAUSED: Playback paused, can resume
     - ERROR: Error state, needs reset
     """
-    """Enum representing possible playback states"""
+    """
+    Enum for tracking playback state
+    
+    States:
+    - IDLE: No audio loaded
+    - LOADED: Audio file loaded, ready to play
+    - PLAYING: Currently playing audio
+    - PAUSED: Playback paused, can resume
+    - ERROR: Error state, needs reset
+    """
     IDLE = auto()      # No audio loaded
     LOADED = auto()    # Audio loaded but not playing
     PLAYING = auto()   # Audio is currently playing
     PAUSED = auto()    # Audio is paused
     ERROR = auto()     # Error state
-
-import logging
 
 # Configure logging
 logging.basicConfig(
