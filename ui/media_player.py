@@ -17,10 +17,19 @@ class PlaybackState(Enum):
     PAUSED = auto()    # Audio is paused
     ERROR = auto()     # Error state
 
+import logging
+
+# Configure logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+
 class AudioPlayer:
     """Handles audio playback with proper resource management"""
     
     def __init__(self):
+        self.logger = logging.getLogger('AudioPlayer')
         self.audio_segment = None
         self.playback = None
         self.duration = 0
@@ -34,22 +43,28 @@ class AudioPlayer:
 
     def load(self, file_path):
         """Load an audio file using pydub."""
+        self.logger.info(f"Loading audio file: {file_path}")
         try:
             self.audio_segment = AudioSegment.from_file(file_path)
             self.duration = len(self.audio_segment) / 1000  # Convert to seconds
             self._state = PlaybackState.LOADED
             self._error_message = ""
+            self.logger.info(f"Successfully loaded audio file. Duration: {self.duration}s")
         except Exception as e:
             self._state = PlaybackState.ERROR
             self._error_message = str(e)
+            self.logger.error(f"Failed to load audio file: {str(e)}", exc_info=True)
             raise
 
     def play(self):
         """Play or resume playback with proper resource management"""
+        self.logger.debug(f"Play requested. Current state: {self._state}")
         if self._state == PlaybackState.IDLE or not self.audio_segment:
+            self.logger.warning("Cannot play: No audio loaded or player idle")
             return False
 
         with self._lock:
+            self.logger.debug(f"Starting playback from position: {self._position}s")
             if self._state == PlaybackState.PLAYING:
                 return False
                 
@@ -204,6 +219,7 @@ class AudioPlayer:
 class MediaPlayerFrame(ttk.LabelFrame):
     def __init__(self, master):
         super().__init__(master, text="Media Player")
+        self.logger = logging.getLogger('MediaPlayerFrame')
         self.audio_player = AudioPlayer()
         self.seek_update_time = 0
         self.duration = 0  # Initialize duration
@@ -376,27 +392,36 @@ class MediaPlayerFrame(ttk.LabelFrame):
             
     def play_audio(self):
         """Toggle play/pause audio playback"""
+        self.logger.info("Play audio requested")
         if not self.audio_player:
+            self.logger.error("No audio player initialized")
             messagebox.showerror("Error", "No audio player initialized")
             return
             
         if self.audio_player.get_state() == PlaybackState.IDLE:
+            self.logger.error("Cannot play: No audio file loaded")
             messagebox.showerror("Error", "No audio file loaded")
             return
 
         try:
+            self.logger.debug(f"Current player state: {self.audio_player.get_state()}")
             if self.audio_player.is_playing():
+                self.logger.info("Pausing playback")
                 if self.audio_player.pause():
                     self.play_button.configure(text="Play")
                     self.cancel_updates()
+                    self.logger.info("Playback paused successfully")
             else:
+                self.logger.info("Starting playback")
                 if self.audio_player.play():
                     self.play_button.configure(text="Pause")
                     self.start_playback_updates()
+                    self.logger.info("Playback started successfully")
                 else:
+                    self.logger.error("Failed to start playback")
                     messagebox.showerror("Playback Error", "Failed to start playback")
         except Exception as e:
-            print(f"Play error: {str(e)}")  # Add logging
+            self.logger.error(f"Playback error: {str(e)}", exc_info=True)
             messagebox.showerror("Playback Error", str(e))
             self.audio_player._cleanup_playback()  # Ensure cleanup on error
             
