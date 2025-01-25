@@ -136,29 +136,22 @@ class AudioPlayer:
                     if self._volume != 1.0:
                         audio_to_play = audio_to_play.apply_gain(20 * np.log10(max(self._volume, 0.0001)))
                     
-                    # Create playback object
-                    new_playback = _play_with_simpleaudio(audio_to_play)
-                    if not new_playback or not new_playback.is_playing():
-                        self.logger.error("Failed to create playing playback object")
+                    # Create playback object and store reference before playing
+                    self.playback = _play_with_simpleaudio(audio_to_play)
+                    if not self.playback:
+                        self.logger.error("Failed to create playback object")
                         return False
-                        
-                    # Only after successful playback creation, update state and references
-                    self.playback = new_playback
+                    
+                    # Update state tracking
                     self._playback_start_time = time.time()
                     self._playback_start_position = self._position
                     self._state = PlaybackState.PLAYING
                     
-                    # Verify playback is still active
-                    if not self.playback.is_playing():
-                        self.logger.error("Playback stopped immediately after starting")
-                        self._cleanup_playback()
-                        return False
-                        
                     self.logger.debug(f"Playback successfully started, state: {self._state}")
                     return True
                 
             except Exception as e:
-                print(f"Playback error: {e}")
+                self.logger.error(f"Playback error: {e}")
                 self._cleanup_playback()
                 return False
 
@@ -228,7 +221,8 @@ class AudioPlayer:
             
             if self.playback:
                 try:
-                    self.playback.stop()
+                    if self.playback.is_playing():
+                        self.playback.stop()
                     self.playback = None
                     self.logger.debug("Playback stopped and cleared")
                 except Exception as e:
@@ -237,11 +231,15 @@ class AudioPlayer:
                     self._error_message = str(e)
                     return
             
+            # Update position before state change
+            if current_state == PlaybackState.PLAYING:
+                self._position = self.get_position()
+            
             # Only change state if we're not preserving it and not in error
             if not preserve_state:
-                if self._state == PlaybackState.PLAYING:
+                if current_state == PlaybackState.PLAYING:
                     new_state = PlaybackState.PAUSED
-                elif self._state == PlaybackState.ERROR:
+                elif current_state == PlaybackState.ERROR:
                     return  # Keep error state
                 else:
                     new_state = PlaybackState.PAUSED if self._position > 0 else PlaybackState.LOADED
