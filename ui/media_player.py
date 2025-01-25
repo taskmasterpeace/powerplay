@@ -1,3 +1,25 @@
+"""
+Media Player Module
+------------------
+This module provides audio playback functionality with a Tkinter-based UI.
+
+Key Components:
+1. AudioPlayer: Core audio playback engine
+2. MediaPlayerFrame: UI wrapper for the audio player
+3. PlaybackState: State management enum
+
+Dependencies:
+- pydub: Audio file handling
+- simpleaudio: Audio playback
+- tkinter: UI framework
+- numpy: Audio processing
+
+Usage:
+    player_frame = MediaPlayerFrame(parent_widget)
+    player_frame.load_audio("path/to/audio.mp3")
+    player_frame.load_transcript("path/to/transcript.txt")  # Optional
+"""
+
 import os
 import tkinter as tk
 from tkinter import ttk, messagebox
@@ -6,10 +28,23 @@ from pydub import AudioSegment
 from pydub.playback import _play_with_simpleaudio
 import threading
 import time
-from concurrent.futures import ThreadPoolExecutor
-from enum import Enum, auto
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.DEBUG,
+                   format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 class PlaybackState(Enum):
+    """
+    Enum for tracking playback state
+    
+    States:
+    - IDLE: No audio loaded
+    - LOADED: Audio file loaded, ready to play
+    - PLAYING: Currently playing audio
+    - PAUSED: Playback paused, can resume
+    - ERROR: Error state, needs reset
+    """
     """Enum representing possible playback states"""
     IDLE = auto()      # No audio loaded
     LOADED = auto()    # Audio loaded but not playing
