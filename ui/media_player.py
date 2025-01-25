@@ -87,12 +87,14 @@ class AudioPlayer:
                 # Start playback
                 self.playback = _play_with_simpleaudio(audio_to_play)
                 if not self.playback:
+                    self.logger.error("Failed to create playback object")
                     return False
                 
                 # Record start time and position
                 self._playback_start_time = time.time()
                 self._playback_start_position = self._position
                 self._state = PlaybackState.PLAYING
+                self.logger.debug(f"Playback started successfully, state updated to: {self._state}")
                 return True
                 
             except Exception as e:
@@ -419,9 +421,13 @@ class MediaPlayerFrame(ttk.LabelFrame):
             else:
                 self.logger.info("Starting playback")
                 if self.audio_player.play():
-                    self.play_button.configure(text="Pause")
-                    self.start_playback_updates()
-                    self.logger.info("Playback started successfully")
+                    if self.audio_player.get_state() == PlaybackState.PLAYING:
+                        self.play_button.configure(text="Pause")
+                        self.start_playback_updates()
+                        self.logger.info("Playback started successfully")
+                    else:
+                        self.logger.error(f"Invalid state after play: {self.audio_player.get_state()}")
+                        messagebox.showerror("Playback Error", "Failed to enter playing state")
                 else:
                     self.logger.error("Failed to start playback")
                     messagebox.showerror("Playback Error", "Failed to start playback")
