@@ -69,8 +69,10 @@ class AudioPlayer:
                 return False
                 
             try:
-                # Clean up any existing playback
-                self._cleanup_playback()
+                # Clean up any existing playback but preserve state
+                was_playing = self._state == PlaybackState.PLAYING
+                current_pos = self.get_position() if was_playing else self._position
+                self._cleanup_playback(preserve_state=True)
                 
                 # Calculate remaining audio
                 start_ms = int(self._position * 1000)
@@ -153,19 +155,22 @@ class AudioPlayer:
                 self._error_message = str(e)
                 return False
 
-    def _cleanup_playback(self):
+    def _cleanup_playback(self, preserve_state=False):
         """Clean up playback resources"""
+        current_state = self._state
         if self.playback:
             try:
                 self.playback.stop()
             except Exception as e:
-                print(f"Cleanup error: {e}")
+                self.logger.error(f"Cleanup error: {e}")
                 self._state = PlaybackState.ERROR
                 self._error_message = str(e)
             finally:
                 self.playback = None
-                if self._state != PlaybackState.ERROR:
+                if self._state != PlaybackState.ERROR and not preserve_state:
                     self._state = PlaybackState.PAUSED if self._position > 0 else PlaybackState.LOADED
+                elif preserve_state:
+                    self._state = current_state
     
     def get_position(self):
         """Get current playback position in seconds"""
