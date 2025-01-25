@@ -7,6 +7,15 @@ from pydub.playback import _play_with_simpleaudio
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
+from enum import Enum, auto
+
+class PlaybackState(Enum):
+    """Enum representing possible playback states"""
+    IDLE = auto()      # No audio loaded
+    LOADED = auto()    # Audio loaded but not playing
+    PLAYING = auto()   # Audio is currently playing
+    PAUSED = auto()    # Audio is paused
+    ERROR = auto()     # Error state
 
 class AudioPlayer:
     """Handles audio playback with proper resource management"""
@@ -15,23 +24,31 @@ class AudioPlayer:
         self.audio_segment = None
         self.playback = None
         self.duration = 0
-        self.playing = False
         self._volume = 1.0
         self._position = 0
         self._lock = threading.Lock()
+        self._state = PlaybackState.IDLE
+        self._error_message = ""
 
     def load(self, file_path):
         """Load an audio file using pydub."""
-        self.audio_segment = AudioSegment.from_file(file_path)
-        self.duration = len(self.audio_segment) / 1000  # Convert to seconds
+        try:
+            self.audio_segment = AudioSegment.from_file(file_path)
+            self.duration = len(self.audio_segment) / 1000  # Convert to seconds
+            self._state = PlaybackState.LOADED
+            self._error_message = ""
+        except Exception as e:
+            self._state = PlaybackState.ERROR
+            self._error_message = str(e)
+            raise
 
     def play(self):
         """Play or resume playback with proper resource management"""
-        if not self.audio_segment:
+        if self._state == PlaybackState.IDLE or not self.audio_segment:
             return False
 
         with self._lock:
-            if self.playing:
+            if self._state == PlaybackState.PLAYING:
                 return False
                 
             try:
@@ -53,7 +70,7 @@ class AudioPlayer:
                 if not self.playback:
                     return False
                     
-                self.playing = True
+                self._state = PlaybackState.PLAYING
                 return True
                 
             except Exception as e:
@@ -64,7 +81,7 @@ class AudioPlayer:
     def pause(self):
         """Pause playback with proper cleanup"""
         with self._lock:
-            if not self.playing:
+            if self._state != PlaybackState.PLAYING:
                 return False
                 
             try:
@@ -106,9 +123,12 @@ class AudioPlayer:
                 self.playback.stop()
             except Exception as e:
                 print(f"Cleanup error: {e}")
+                self._state = PlaybackState.ERROR
+                self._error_message = str(e)
             finally:
                 self.playback = None
-                self.playing = False
+                if self._state != PlaybackState.ERROR:
+                    self._state = PlaybackState.PAUSED if self._position > 0 else PlaybackState.LOADED
     
     def get_position(self):
         """Get current playback position in seconds"""
@@ -127,7 +147,15 @@ class AudioPlayer:
 
     def is_playing(self):
         """Check if audio is currently playing."""
-        return self.playing
+        return self._state == PlaybackState.PLAYING
+
+    def get_state(self):
+        """Get current playback state."""
+        return self._state
+
+    def get_error(self):
+        """Get last error message if in error state."""
+        return self._error_message if self._state == PlaybackState.ERROR else ""
 
     def set_volume(self, volume):
         """Set playback volume (0.0 to 1.0)."""
