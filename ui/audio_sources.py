@@ -260,6 +260,15 @@ class RecordingFrame(ttk.Frame):
         )
         self.template_combo.pack(side=tk.LEFT, padx=5)
         
+        # Response header frame
+        response_header = ttk.Frame(self.response_frame)
+        response_header.pack(fill=tk.X, padx=5, pady=2)
+        
+        # Add copy button to response
+        self.copy_response_btn = ttk.Button(response_header, text="📋 Copy",
+            command=lambda: self.copy_to_clipboard(self.response_text))
+        self.copy_response_btn.pack(side=tk.RIGHT)
+        
         # Response text area
         self.response_text = tk.Text(self.response_frame,
                                    wrap=tk.WORD,
@@ -271,7 +280,13 @@ class RecordingFrame(ttk.Frame):
         self.response_scroll.pack(side=tk.RIGHT, fill=tk.Y)
         self.response_text.configure(yscrollcommand=self.response_scroll.set)
         
-        # No text tags needed anymore
+        # Add copy to clipboard method
+        def copy_to_clipboard(self, text_widget):
+            """Copy text widget contents to clipboard"""
+            content = text_widget.get('1.0', tk.END).strip()
+            self.clipboard_clear()
+            self.clipboard_append(content)
+            self.update()  # Required for clipboard to work
         
         # Bind function keys
         for i in range(1, 13):  # F1 through F12
