@@ -89,23 +89,26 @@ class AudioPlayer:
                     audio_to_play = audio_to_play.apply_gain(20 * np.log10(max(self._volume, 0.0001)))
                 
                 # Start playback
+                self._state = PlaybackState.PLAYING  # Set state BEFORE starting playback
+                self.logger.debug(f"Setting state to PLAYING before starting playback")
+                
                 self.playback = _play_with_simpleaudio(audio_to_play)
                 if not self.playback:
                     self.logger.error("Failed to create playback object")
+                    self._state = PlaybackState.LOADED  # Reset state on failure
+                    return False
+                
+                # Verify playback started
+                if not self.playback.is_playing():
+                    self.logger.error("Playback object created but not playing")
+                    self._state = PlaybackState.LOADED  # Reset state on failure
+                    self._cleanup_playback()
                     return False
                 
                 # Record start time and position
                 self._playback_start_time = time.time()
                 self._playback_start_position = self._position
-                self._state = PlaybackState.PLAYING
-                self.logger.debug(f"Playback started successfully, state updated to: {self._state}")
-                
-                # Verify playback started
-                if not self.playback.is_playing():
-                    self.logger.error("Playback object created but not playing")
-                    self._cleanup_playback()
-                    return False
-                    
+                self.logger.debug(f"Playback confirmed started, state is: {self._state}")
                 return True
                 
             except Exception as e:
@@ -171,19 +174,27 @@ class AudioPlayer:
     def _cleanup_playback(self, preserve_state=False):
         """Clean up playback resources"""
         current_state = self._state
+        self.logger.debug(f"Cleanup starting. Current state: {current_state}, preserve_state: {preserve_state}")
+        
         if self.playback:
             try:
                 self.playback.stop()
+                self.playback = None
+                self.logger.debug("Playback stopped and cleared")
             except Exception as e:
                 self.logger.error(f"Cleanup error: {e}")
                 self._state = PlaybackState.ERROR
                 self._error_message = str(e)
-            finally:
-                self.playback = None
-                if self._state != PlaybackState.ERROR and not preserve_state:
-                    self._state = PlaybackState.PAUSED if self._position > 0 else PlaybackState.LOADED
-                elif preserve_state:
-                    self._state = current_state
+                return
+        
+        # Only change state if we're not preserving it and not in error
+        if not preserve_state and self._state != PlaybackState.ERROR:
+            new_state = PlaybackState.PAUSED if self._position > 0 else PlaybackState.LOADED
+            self.logger.debug(f"Setting new state to: {new_state}")
+            self._state = new_state
+        elif preserve_state:
+            self.logger.debug(f"Preserving state as: {current_state}")
+            self._state = current_state
     
     def get_position(self):
         """Get current playback position in seconds"""
