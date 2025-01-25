@@ -326,7 +326,7 @@ class MediaPlayerFrame(ttk.LabelFrame):
         
         # Top section - Waveform and controls
         self.top_frame = ttk.Frame(self.main_container)
-        self.main_container.add(self.top_frame, weight=1, stretch='always')
+        self.main_container.add(self.top_frame, weight=1)
         
         # Playback controls
         self.controls_frame = ttk.Frame(self.top_frame)
