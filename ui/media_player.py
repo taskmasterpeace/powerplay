@@ -207,6 +207,7 @@ class MediaPlayerFrame(ttk.LabelFrame):
         self.audio_player = AudioPlayer()
         self.seek_update_time = 0
         self.duration = 0  # Initialize duration
+        self.auto_play = tk.BooleanVar(value=False)  # Add auto-play option
         
         # Filename display
         self.filename_var = tk.StringVar(value="No file loaded")
@@ -250,8 +251,20 @@ class MediaPlayerFrame(ttk.LabelFrame):
         self.position_slider.bind('<Button-1>', lambda e: setattr(self.position_slider, '_dragging', True))
         self.position_slider.bind('<ButtonRelease-1>', lambda e: setattr(self.position_slider, '_dragging', False))
         
+        # Playback options frame
+        self.options_frame = ttk.Frame(self.controls_frame)
+        self.options_frame.pack(side=tk.RIGHT, padx=5)
+        
+        # Auto-play checkbox
+        self.auto_play_check = ttk.Checkbutton(
+            self.options_frame, 
+            text="Auto-play next",
+            variable=self.auto_play
+        )
+        self.auto_play_check.pack(side=tk.LEFT, padx=5)
+        
         # Volume control
-        self.volume_frame = ttk.Frame(self.controls_frame)
+        self.volume_frame = ttk.Frame(self.options_frame)
         self.volume_frame.pack(side=tk.RIGHT, padx=5)
         
         self.volume_label = ttk.Label(self.volume_frame, text="Volume:")
@@ -441,6 +454,9 @@ class MediaPlayerFrame(ttk.LabelFrame):
                     position = self.audio_player.get_position()
                     if position >= self.audio_player.duration:
                         self.master.after_idle(self._on_playback_complete)
+                        # Check for auto-play
+                        if self.auto_play.get():
+                            self.master.after(1000, self.play_next)  # Wait 1s before next
                         return
                     self.update_time_display()
                     progress = (position / self.audio_player.duration) * 100
@@ -474,9 +490,18 @@ class MediaPlayerFrame(ttk.LabelFrame):
             
     def _on_playback_complete(self):
         """Handle playback completion"""
+        # Reset playback state
         self.audio_player._cleanup_playback()
         self.play_button.configure(text="Play")
         self.cancel_updates()
+        
+        # Reset position to start
+        self.position_slider.set(0)
+        self._position = 0
+        self.update_time_display()
+        
+        # Emit completion event
+        self.event_generate('<<PlaybackComplete>>')
             
     def cancel_updates(self):
         """Cancel any pending updates"""
@@ -490,6 +515,11 @@ class MediaPlayerFrame(ttk.LabelFrame):
             volume = float(value) / 100.0
             self.audio_player.set_volume(volume)
             
+    def play_next(self):
+        """Play the next file in the playlist if available"""
+        # Generate event for parent to handle
+        self.event_generate('<<RequestNextFile>>')
+        
     def destroy(self):
         """Cleanup resources before destroying widget"""
         try:
