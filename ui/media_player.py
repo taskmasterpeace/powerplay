@@ -363,7 +363,7 @@ class MediaPlayerFrame(ttk.LabelFrame):
             
     def play_audio(self):
         """Toggle play/pause audio playback"""
-        if not self.audio_file:
+        if not self.audio_player or self.audio_player.get_state() == PlaybackState.IDLE:
             return
 
         try:
