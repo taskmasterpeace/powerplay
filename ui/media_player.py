@@ -271,11 +271,26 @@ class MediaPlayerFrame(ttk.LabelFrame):
         
     def load_audio(self, file_path):
         """Entry point for loading audio"""
-        self.audio_file = file_path
-        self.filename_var.set("Loading...")
-        
-        # Start async loading
-        self.master.after(50, self.load_audio_async, file_path)
+        if not file_path or not os.path.exists(file_path):
+            self.filename_var.set("Invalid file path")
+            return
+            
+        try:
+            # Stop any current playback
+            self.stop_audio()
+            
+            # Reset state
+            self.audio_file = file_path
+            self.filename_var.set("Loading...")
+            self.position_slider.set(0)
+            self.time_var.set("00:00 / 00:00")
+            
+            # Start async loading
+            self.master.after(50, self.load_audio_async, file_path)
+            
+        except Exception as e:
+            self.filename_var.set(f"Error: {str(e)}")
+            self.audio_file = None
         
     def load_audio_async(self, file_path):
         """Load audio file asynchronously"""
@@ -336,22 +351,20 @@ class MediaPlayerFrame(ttk.LabelFrame):
         self.update_time_display()
         self.cancel_updates()
         
-    def _throttled_seek(self, value):
-        """Throttle seek operations to prevent overload"""
-        now = time.time()
-        if now - self.seek_update_time > 0.1:  # 100ms throttle
-            self.seek_position(value)
-            self.seek_update_time = now
-            
     def seek_position(self, value):
         """Handle seeking in audio"""
-        if self.audio_file:
-            now = time.time()
-            if now - self.seek_update_time > 0.1:  # 100ms throttle
+        if not self.audio_file:
+            return
+            
+        now = time.time()
+        if now - self.seek_update_time > 0.1:  # 100ms throttle
+            try:
                 position = (float(value) / 100) * self.audio_player.duration
-                self.audio_player.seek(position)
-                self.current_position = position
+                if self.audio_player.seek(position):
+                    self.update_time_display()
                 self.seek_update_time = now
+            except Exception as e:
+                print(f"Seek error: {e}")
             
             
     def search_transcript(self):
