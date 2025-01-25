@@ -29,6 +29,8 @@ class AudioPlayer:
         self._lock = threading.Lock()
         self._state = PlaybackState.IDLE
         self._error_message = ""
+        self._playback_start_time = 0
+        self._playback_start_position = 0
 
     def load(self, file_path):
         """Load an audio file using pydub."""
@@ -69,7 +71,10 @@ class AudioPlayer:
                 self.playback = _play_with_simpleaudio(audio_to_play)
                 if not self.playback:
                     return False
-                    
+                
+                # Record start time and position
+                self._playback_start_time = time.time()
+                self._playback_start_position = self._position
                 self._state = PlaybackState.PLAYING
                 return True
                 
@@ -137,13 +142,20 @@ class AudioPlayer:
             
         try:
             if self.playback and self.playback.is_playing():
-                # Calculate position based on remaining samples
-                played_ms = len(self.audio_segment) - len(self.playback._audio_segment)
-                return (played_ms / 1000.0) + self._position
+                # Calculate position based on elapsed time
+                elapsed = time.time() - self._playback_start_time
+                current_pos = self._playback_start_position + elapsed
+                
+                # Ensure we don't exceed duration
+                return min(current_pos, self.duration)
+                
+            # If playback stopped, update stored position
+            self._position = min(self._position, self.duration)
+            return self._position
+            
         except Exception as e:
             print(f"Position error: {e}")
-            
-        return self._position
+            return self._position
 
     def is_playing(self):
         """Check if audio is currently playing."""
