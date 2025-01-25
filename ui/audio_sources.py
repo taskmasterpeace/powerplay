@@ -289,14 +289,6 @@ class RecordingFrame(ttk.Frame):
         self.response_scroll.pack(side=tk.RIGHT, fill=tk.Y)
         self.response_text.configure(yscrollcommand=self.response_scroll.set)
         
-        # Add copy to clipboard method
-        def copy_to_clipboard(self, text_widget):
-            """Copy text widget contents to clipboard"""
-            content = text_widget.get('1.0', tk.END).strip()
-            self.clipboard_clear()
-            self.clipboard_append(content)
-            self.update()  # Required for clipboard to work
-        
         # Bind function keys
         for i in range(1, 13):  # F1 through F12
             self.master.bind(f'<F{i}>', self.add_marker)
@@ -705,6 +697,13 @@ class RecordingFrame(ttk.Frame):
         self.transcript_text.insert(tk.END, text)
         self.transcript_text.see(tk.END)
         
+    def copy_to_clipboard(self, text_widget):
+        """Copy text widget contents to clipboard"""
+        content = text_widget.get('1.0', tk.END).strip()
+        self.clipboard_clear()
+        self.clipboard_append(content)
+        self.update()  # Required for clipboard to work
+
     def on_closing(self):
         """Handle window closing"""
         if self.recording:
