@@ -109,31 +109,33 @@ class AudioPlayer:
 
     def pause(self):
         """Pause playback with proper cleanup"""
-        with self._lock:
+        with self._state_lock:
             if self._state != PlaybackState.PLAYING:
                 return False
-                
+            
             try:
-                self._position = self.get_position()
-                self._cleanup_playback()
-                return True
+                with self._playback_lock:
+                    self._position = self.get_position()
+                    self._cleanup_playback()
+                    return True
             except Exception as e:
-                print(f"Pause error: {e}")
+                self.logger.error(f"Pause error: {e}")
                 self._cleanup_playback()
                 return False
 
     def stop(self):
         """Stop playback and reset state"""
-        with self._lock:
-            self._cleanup_playback()
-            self._position = 0
+        with self._state_lock:
+            with self._playback_lock:
+                self._cleanup_playback()
+                self._position = 0
 
     def seek(self, position):
         """Seek to a specific position in seconds."""
         if not self.audio_segment:
             return False
             
-        with self._lock:
+        with self._state_lock:
             try:
                 # Validate position
                 new_position = max(0, min(position, self.duration))
@@ -143,21 +145,22 @@ class AudioPlayer:
                 # Store playback state
                 was_playing = self._state == PlaybackState.PLAYING
                 
-                # Update position and cleanup
-                self._cleanup_playback()
-                self._position = new_position
-                self._playback_start_position = new_position
-                self._playback_start_time = time.time()
-                
-                # Resume if was playing
-                if was_playing:
-                    return self.play()
+                with self._playback_lock:
+                    # Update position and cleanup
+                    self._cleanup_playback()
+                    self._position = new_position
+                    self._playback_start_position = new_position
+                    self._playback_start_time = time.time()
                     
-                self._state = PlaybackState.PAUSED
-                return True
-                
+                    # Resume if was playing
+                    if was_playing:
+                        return self.play()
+                    
+                    self._state = PlaybackState.PAUSED
+                    return True
+                    
             except Exception as e:
-                print(f"Seek error: {e}")
+                self.logger.error(f"Seek error: {e}")
                 self._state = PlaybackState.ERROR
                 self._error_message = str(e)
                 return False
@@ -223,17 +226,18 @@ class AudioPlayer:
 
     def set_volume(self, volume):
         """Set playback volume (0.0 to 1.0)."""
-        with self._lock:
+        with self._state_lock:
             try:
                 self._volume = max(0.0, min(1.0, volume))
                 if self._state == PlaybackState.PLAYING:
-                    current_pos = self.get_position()
-                    self._cleanup_playback()
-                    self._position = current_pos
-                    return self.play()
+                    with self._playback_lock:
+                        current_pos = self.get_position()
+                        self._cleanup_playback()
+                        self._position = current_pos
+                        return self.play()
                 return True
             except Exception as e:
-                print(f"Volume error: {e}")
+                self.logger.error(f"Volume error: {e}")
                 return False
 
 class MediaPlayerFrame(ttk.LabelFrame):
