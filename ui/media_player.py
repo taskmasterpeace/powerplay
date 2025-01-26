@@ -274,24 +274,19 @@ class AudioPlayer:
     
     def get_position(self):
         """Get current playback position in seconds"""
-        if self._state != PlaybackState.PLAYING:
+        if self._state != PlaybackState.PLAYING or not self.stream:
             return self._position
             
         try:
-            if self.playback and self.playback.is_playing():
-                # Calculate position based on elapsed time
-                elapsed = time.time() - self._playback_start_time
-                current_pos = self._playback_start_position + elapsed
-                
-                # Ensure we don't exceed duration
-                return min(current_pos, self.duration)
-                
-            # If playback stopped, update stored position
-            self._position = min(self._position, self.duration)
-            return self._position
+            # Calculate position based on elapsed time
+            elapsed = time.time() - self._playback_start_time
+            current_pos = self._playback_start_position + elapsed
+            
+            # Ensure we don't exceed duration
+            return min(current_pos, self.duration)
             
         except Exception as e:
-            print(f"Position error: {e}")
+            self.logger.error(f"Position error: {e}")
             return self._position
 
     def is_playing(self):
