@@ -202,6 +202,7 @@ class AudioPlayer:
             with self._playback_lock:
                 self._cleanup_playback()
                 self._position = 0
+                self._state = PlaybackState.LOADED
 
     def seek(self, position):
         """Seek to a specific position in seconds."""
@@ -244,6 +245,7 @@ class AudioPlayer:
             current_state = self._state
             self.logger.debug(f"Cleanup starting. Current state: {current_state}, preserve_state: {preserve_state}")
             
+            # Stop and close stream if it exists
             if self.stream:
                 try:
                     if self.stream.is_active():
@@ -254,23 +256,24 @@ class AudioPlayer:
                 finally:
                     self.stream = None
             
-            # Update position before state change
+            # Update position if playing
             if current_state == PlaybackState.PLAYING:
-                self._position = self.get_position()
+                try:
+                    self._position = self.get_position()
+                except Exception as e:
+                    self.logger.error(f"Position update error: {e}")
+                    self._position = 0
             
-            # Only change state if we're not preserving it and not in error
+            # State management
             if not preserve_state:
-                if current_state == PlaybackState.PLAYING:
-                    new_state = PlaybackState.PAUSED
-                elif current_state == PlaybackState.ERROR:
+                if current_state == PlaybackState.ERROR:
                     return  # Keep error state
+                elif current_state == PlaybackState.PLAYING:
+                    self._state = PlaybackState.PAUSED
                 else:
-                    new_state = PlaybackState.PAUSED if self._position > 0 else PlaybackState.LOADED
-                self.logger.debug(f"Setting new state to: {new_state}")
-                self._state = new_state
-            else:
-                self.logger.debug(f"Preserving state as: {current_state}")
-                self._state = current_state
+                    # Don't change state if we're already in LOADED or PAUSED
+                    if current_state not in [PlaybackState.LOADED, PlaybackState.PAUSED]:
+                        self._state = PlaybackState.LOADED
     
     def get_position(self):
         """Get current playback position in seconds"""
