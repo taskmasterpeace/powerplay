@@ -25,7 +25,10 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import numpy as np
 from pydub import AudioSegment
-from pydub.playback import _play_with_simpleaudio
+from pydub.generators import Sine
+import pyaudio
+import wave
+import io
 import threading
 import time
 import logging
@@ -73,8 +76,9 @@ class AudioPlayer:
     
     def __init__(self):
         self.logger = logging.getLogger('AudioPlayer')
+        self.pyaudio_instance = pyaudio.PyAudio()
+        self.stream = None
         self.audio_segment = None
-        self.playback = None
         self.duration = 0
         self._volume = 1.0
         self._position = 0
@@ -85,6 +89,28 @@ class AudioPlayer:
         self._playback_start_time = 0
         self._playback_start_position = 0
         
+    def _play_with_pyaudio(self, audio_segment):
+        """Play audio using PyAudio with proper stream management"""
+        wav_data = io.BytesIO()
+        audio_segment.export(wav_data, format="wav")
+        wav_data.seek(0)
+        
+        with wave.open(wav_data, 'rb') as wf:
+            def callback(in_data, frame_count, time_info, status):
+                data = wf.readframes(frame_count)
+                return (data, pyaudio.paContinue)
+            
+            self.stream = self.pyaudio_instance.open(
+                format=self.pyaudio_instance.get_format_from_width(wf.getsampwidth()),
+                channels=wf.getnchannels(),
+                rate=wf.getframerate(),
+                output=True,
+                stream_callback=callback
+            )
+            self.stream.start_stream()
+            
+        return self.stream
+
     def _set_state(self, new_state):
         """Wrapper for state changes with logging"""
         with self._state_lock:
@@ -219,17 +245,15 @@ class AudioPlayer:
             current_state = self._state
             self.logger.debug(f"Cleanup starting. Current state: {current_state}, preserve_state: {preserve_state}")
             
-            if self.playback:
+            if self.stream:
                 try:
-                    if self.playback.is_playing():
-                        self.playback.stop()
-                    self.playback = None
-                    self.logger.debug("Playback stopped and cleared")
+                    if self.stream.is_active():
+                        self.stream.stop_stream()
+                    self.stream.close()
                 except Exception as e:
-                    self.logger.error(f"Cleanup error: {e}")
-                    self._state = PlaybackState.ERROR
-                    self._error_message = str(e)
-                    return
+                    self.logger.error(f"Stream closure error: {e}")
+                finally:
+                    self.stream = None
             
             # Update position before state change
             if current_state == PlaybackState.PLAYING:
@@ -272,8 +296,8 @@ class AudioPlayer:
             return self._position
 
     def is_playing(self):
-        """Check if audio is currently playing."""
-        return self._state == PlaybackState.PLAYING
+        """Check if audio is currently playing"""
+        return self._state == PlaybackState.PLAYING and self.stream and self.stream.is_active()
 
     def get_state(self):
         """Get current playback state."""
@@ -282,6 +306,13 @@ class AudioPlayer:
     def get_error(self):
         """Get last error message if in error state."""
         return self._error_message if self._state == PlaybackState.ERROR else ""
+        
+    def __del__(self):
+        """Cleanup PyAudio instance on deletion"""
+        if self.stream:
+            self.stream.close()
+        if self.pyaudio_instance:
+            self.pyaudio_instance.terminate()
 
     def set_volume(self, volume):
         """Set playback volume (0.0 to 1.0)."""
