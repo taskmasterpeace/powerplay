@@ -162,11 +162,10 @@ class AudioPlayer:
                     if self._volume != 1.0:
                         audio_to_play = audio_to_play.apply_gain(20 * np.log10(max(self._volume, 0.0001)))
                     
-                    # Create playback object and store reference before playing
-                    self.playback = _play_with_simpleaudio(audio_to_play)
-                    if not self.playback:
-                        self.logger.error("Failed to create playback object")
-                        return False
+                    # Create playback stream
+                    self.stream = self._play_with_pyaudio(audio_to_play)
+                    if not self.stream or not self.stream.is_active():
+                        raise RuntimeError("Failed to start playback")
                     
                     # Update state tracking
                     self._playback_start_time = time.time()
