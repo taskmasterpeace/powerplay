@@ -103,7 +103,7 @@ class AudioPlayer:
             try:
                 if self._pending_cleanup:
                     return (None, pyaudio.paComplete)
-                data = wf.readframes(frame_count)
+                data = self._wave_file.readframes(frame_count)
                 if not data:
                     self._pending_cleanup = True
                     return (None, pyaudio.paComplete)
@@ -124,9 +124,9 @@ class AudioPlayer:
                     self.stream = None
             
             self.stream = self.pyaudio_instance.open(
-                format=self.pyaudio_instance.get_format_from_width(wf.getsampwidth()),
-                channels=wf.getnchannels(),
-                rate=wf.getframerate(),
+                format=self.pyaudio_instance.get_format_from_width(self._wave_file.getsampwidth()),
+                channels=self._wave_file.getnchannels(),
+                rate=self._wave_file.getframerate(),
                 output=True,
                 stream_callback=callback
             )
