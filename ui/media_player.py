@@ -84,10 +84,12 @@ class AudioPlayer:
         self._position = 0
         self._playback_lock = threading.RLock()  # Reentrant lock for playback operations
         self._state_lock = threading.Lock()      # Separate lock for state changes
+        self._stream_lock = threading.Lock()     # Lock for stream operations
         self._state = PlaybackState.IDLE
         self._error_message = ""
         self._playback_start_time = 0
         self._playback_start_position = 0
+        self._pending_cleanup = False
         
     def _play_with_pyaudio(self, audio_segment):
         """Play audio using PyAudio with proper stream management"""
@@ -95,10 +97,32 @@ class AudioPlayer:
         audio_segment.export(wav_data, format="wav")
         wav_data.seek(0)
         
-        with wave.open(wav_data, 'rb') as wf:
-            def callback(in_data, frame_count, time_info, status):
+        wf = wave.open(wav_data, 'rb')
+        self._wave_file = wf  # Store reference to prevent GC
+        
+        def callback(in_data, frame_count, time_info, status):
+            try:
+                if self._pending_cleanup:
+                    return (None, pyaudio.paComplete)
                 data = wf.readframes(frame_count)
+                if not data:
+                    self._pending_cleanup = True
+                    return (None, pyaudio.paComplete)
                 return (data, pyaudio.paContinue)
+            except Exception as e:
+                self.logger.error(f"Stream callback error: {e}")
+                self._pending_cleanup = True
+                return (None, pyaudio.paComplete)
+        
+        with self._stream_lock:
+            if self.stream is not None:
+                try:
+                    self.stream.stop_stream()
+                    self.stream.close()
+                except Exception as e:
+                    self.logger.error(f"Stream cleanup error: {e}")
+                finally:
+                    self.stream = None
             
             self.stream = self.pyaudio_instance.open(
                 format=self.pyaudio_instance.get_format_from_width(wf.getsampwidth()),
@@ -108,7 +132,7 @@ class AudioPlayer:
                 stream_callback=callback
             )
             self.stream.start_stream()
-            
+        
         return self.stream
 
     def _set_state(self, new_state):
@@ -245,16 +269,29 @@ class AudioPlayer:
             current_state = self._state
             self.logger.debug(f"Cleanup starting. Current state: {current_state}, preserve_state: {preserve_state}")
             
+            # Signal callback to stop
+            self._pending_cleanup = True
+            
             # Stop and close stream if it exists
-            if self.stream:
-                try:
-                    if self.stream.is_active():
-                        self.stream.stop_stream()
-                    self.stream.close()
-                except Exception as e:
-                    self.logger.error(f"Stream closure error: {e}")
-                finally:
-                    self.stream = None
+            with self._stream_lock:
+                if self.stream:
+                    try:
+                        if self.stream.is_active():
+                            self.stream.stop_stream()
+                        self.stream.close()
+                    except Exception as e:
+                        self.logger.error(f"Stream closure error: {e}")
+                    finally:
+                        self.stream = None
+                
+                # Clean up wave file
+                if hasattr(self, '_wave_file'):
+                    try:
+                        self._wave_file.close()
+                    except Exception as e:
+                        self.logger.error(f"Wave file closure error: {e}")
+                    finally:
+                        self._wave_file = None
             
             # Update position if playing
             if current_state == PlaybackState.PLAYING:
@@ -306,10 +343,32 @@ class AudioPlayer:
         
     def __del__(self):
         """Cleanup PyAudio instance on deletion"""
-        if self.stream:
-            self.stream.close()
-        if self.pyaudio_instance:
-            self.pyaudio_instance.terminate()
+        try:
+            self._pending_cleanup = True
+            with self._stream_lock:
+                if self.stream:
+                    try:
+                        if self.stream.is_active():
+                            self.stream.stop_stream()
+                        self.stream.close()
+                    except:
+                        pass
+                    finally:
+                        self.stream = None
+                
+                if hasattr(self, '_wave_file'):
+                    try:
+                        self._wave_file.close()
+                    except:
+                        pass
+                
+                if self.pyaudio_instance:
+                    try:
+                        self.pyaudio_instance.terminate()
+                    except:
+                        pass
+        except:
+            pass  # Suppress any errors during cleanup
 
     def set_volume(self, volume):
         """Set playback volume (0.0 to 1.0)."""
