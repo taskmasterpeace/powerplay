@@ -254,13 +254,13 @@ class AudioPlayer:
     
     def get_position(self):
         """Get current playback position in seconds"""
-        if self._state != PlaybackState.PLAYING or not self.stream:
+        if self._state != PlaybackState.PLAYING:
             return self._position
             
         try:
-            # Calculate position based on elapsed time
-            elapsed = time.time() - self._playback_start_time
-            current_pos = self._playback_start_position + elapsed
+            # Get position from pygame
+            pos = pygame.mixer.music.get_pos() / 1000.0  # Convert ms to seconds
+            current_pos = self._playback_start_position + pos
             
             # Ensure we don't exceed duration
             return min(current_pos, self.duration)
@@ -271,7 +271,7 @@ class AudioPlayer:
 
     def is_playing(self):
         """Check if audio is currently playing"""
-        return self._state == PlaybackState.PLAYING and self.stream and self.stream.is_active()
+        return self._state == PlaybackState.PLAYING and pygame.mixer.music.get_busy()
 
     def get_state(self):
         """Get current playback state."""
