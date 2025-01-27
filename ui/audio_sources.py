@@ -137,24 +137,6 @@ class SingleFileFrame(ttk.Frame):
         self.file_label.config(text=os.path.basename(file_path))
         self.current_file = file_path  # Store selected file path
 
-class RecordingFrame(ttk.Frame):
-    def __init__(self, master, app):
-        super().__init__(master)
-        self.app = app
-        self.recording = False
-        self.transcribing = False
-        self.current_transcript = ""
-        self.markers = []  # Store markers with timestamps
-        
-        # State variables for interval processing
-        self.last_process_time = 0  # Tracks when we last processed text
-        
-        # Initialize LangChain service
-        self.langchain_service = LangChainService()
-        
-        # Create main container with paned window
-        self.paned_window = ttk.PanedWindow(self, orient=tk.HORIZONTAL)
-        self.paned_window.pack(fill=tk.BOTH, expand=True)
         
         # Left side - Recording controls and live transcript
         self.left_frame = ttk.Frame(self.paned_window)
