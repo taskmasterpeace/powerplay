@@ -394,6 +394,8 @@ class MediaPlayerFrame(ttk.LabelFrame):
         self.seek_update_time = 0
         self.duration = 0  # Initialize duration
         self.auto_play = tk.BooleanVar(value=False)  # Add auto-play option
+        self._update_lock = threading.Lock()
+        self._pending_updates = set()
         
         # Filename display
         self.filename_var = tk.StringVar(value="No file loaded")
@@ -668,30 +670,40 @@ class MediaPlayerFrame(ttk.LabelFrame):
     def start_playback_updates(self):
         """Start updating playback position"""
         def update():
-            if not self.audio_player:
-                return
-                
-            try:
-                if self.audio_player.is_playing():
-                    position = self.audio_player.get_position()
-                    if position >= self.audio_player.duration:
+            update_id = None
+            with self._update_lock:
+                if not self.audio_player:
+                    return
+                    
+                try:
+                    if self.audio_player.is_playing():
+                        position = self.audio_player.get_position()
+                        if position >= self.audio_player.duration:
+                            self.master.after_idle(self._on_playback_complete)
+                            # Check for auto-play
+                            if self.auto_play.get():
+                                self.master.after(1000, self.play_next)
+                            return
+                            
+                        # Update UI in main thread
+                        self.master.after_idle(lambda: self._update_ui(position))
+                        
+                        # Schedule next update if still playing
+                        if self.audio_player.is_playing():
+                            update_id = self.master.after(50, update)
+                            self._pending_updates.add(update_id)
+                    else:
                         self.master.after_idle(self._on_playback_complete)
-                        # Check for auto-play
-                        if self.auto_play.get():
-                            self.master.after(1000, self.play_next)  # Wait 1s before next
-                        return
-                    self.update_time_display()
-                    progress = (position / self.audio_player.duration) * 100
-                    self.position_slider.set(progress)
-                    self.update_id = self.master.after(50, update)
-                else:
-                    self._on_playback_complete()
-            except Exception as e:
-                print(f"Update error: {e}")
-                self._on_playback_complete()
+                except Exception as e:
+                    self.logger.error(f"Update error: {e}")
+                    self.master.after_idle(self._on_playback_complete)
+                finally:
+                    if update_id:
+                        self._pending_updates.discard(update_id)
                 
         self.cancel_updates()
-        self.update_id = self.master.after(50, update)
+        initial_update_id = self.master.after(50, update)
+        self._pending_updates.add(initial_update_id)
 
     def update_time_display(self):
         """Update time labels and slider"""
@@ -725,11 +737,29 @@ class MediaPlayerFrame(ttk.LabelFrame):
         # Emit completion event
         self.event_generate('<<PlaybackComplete>>')
             
+    def _update_ui(self, position):
+        """Update UI elements with current position"""
+        if not self.audio_player:
+            return
+            
+        try:
+            self.update_time_display()
+            if self.duration > 0:
+                progress = (position / self.duration) * 100
+                if not hasattr(self.position_slider, '_dragging'):
+                    self.position_slider.set(progress)
+        except Exception as e:
+            self.logger.error(f"UI update error: {e}")
+            
     def cancel_updates(self):
         """Cancel any pending updates"""
-        if self.update_id:
-            self.after_cancel(self.update_id)
-            self.update_id = None
+        with self._update_lock:
+            for update_id in list(self._pending_updates):
+                try:
+                    self.after_cancel(update_id)
+                except Exception as e:
+                    self.logger.error(f"Error canceling update {update_id}: {e}")
+            self._pending_updates.clear()
 
     def set_volume(self, value):
         """Set audio volume"""
