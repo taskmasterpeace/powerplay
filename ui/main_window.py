@@ -5,7 +5,8 @@ from .components import (
     ModelSelectionFrame,
     ProgressFrame
 )
-from .audio_sources import AudioSourceFrame, RecordingFrame
+from .audio_sources import AudioSourceFrame
+from .recording import RecordingFrame
 
 class MainWindow:
     def __init__(self, master, app):
