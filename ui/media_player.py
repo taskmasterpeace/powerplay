@@ -26,9 +26,7 @@ from tkinter import ttk, messagebox
 import numpy as np
 from pydub import AudioSegment
 from pydub.generators import Sine
-import pyaudio
-import wave
-import io
+import pygame
 import threading
 import time
 import logging
@@ -76,63 +74,40 @@ class AudioPlayer:
     
     def __init__(self):
         self.logger = logging.getLogger('AudioPlayer')
-        self.pyaudio_instance = pyaudio.PyAudio()
-        self.stream = None
+        pygame.mixer.init()
         self.audio_segment = None
         self.duration = 0
         self._volume = 1.0
         self._position = 0
         self._playback_lock = threading.RLock()  # Reentrant lock for playback operations
         self._state_lock = threading.Lock()      # Separate lock for state changes
-        self._stream_lock = threading.Lock()     # Lock for stream operations
         self._state = PlaybackState.IDLE
         self._error_message = ""
         self._playback_start_time = 0
         self._playback_start_position = 0
-        self._pending_cleanup = False
         
-    def _play_with_pyaudio(self, audio_segment):
-        """Play audio using PyAudio with proper stream management"""
-        self._wav_buffer = io.BytesIO()
-        audio_segment.export(self._wav_buffer, format="wav")
-        self._wav_buffer.seek(0)
-        
-        self._wave_file = wave.open(self._wav_buffer, 'rb')
-        
-        def callback(in_data, frame_count, time_info, status):
-            try:
-                if self._pending_cleanup:
-                    return (None, pyaudio.paComplete)
-                data = self._wave_file.readframes(frame_count)
-                if not data:
-                    self._pending_cleanup = True
-                    return (None, pyaudio.paComplete)
-                return (data, pyaudio.paContinue)
-            except Exception as e:
-                self.logger.error(f"Stream callback error: {e}")
-                self._pending_cleanup = True
-                return (None, pyaudio.paComplete)
-        
-        with self._stream_lock:
-            if self.stream is not None:
-                try:
-                    self.stream.stop_stream()
-                    self.stream.close()
-                except Exception as e:
-                    self.logger.error(f"Stream cleanup error: {e}")
-                finally:
-                    self.stream = None
+    def _play_audio(self, audio_segment):
+        """Play audio using pygame mixer"""
+        try:
+            # Export to temporary file
+            temp_file = 'temp_playback.mp3'
+            audio_segment.export(temp_file, format='mp3')
             
-            self.stream = self.pyaudio_instance.open(
-                format=self.pyaudio_instance.get_format_from_width(self._wave_file.getsampwidth()),
-                channels=self._wave_file.getnchannels(),
-                rate=self._wave_file.getframerate(),
-                output=True,
-                stream_callback=callback
-            )
-            self.stream.start_stream()
-        
-        return self.stream
+            # Load and play with pygame
+            pygame.mixer.music.load(temp_file)
+            pygame.mixer.music.play(start=self._position)
+            pygame.mixer.music.set_volume(self._volume)
+            
+            # Update state tracking
+            self._playback_start_time = time.time()
+            self._playback_start_position = self._position
+            self._state = PlaybackState.PLAYING
+            
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Playback error: {e}")
+            return False
 
     def _set_state(self, new_state):
         """Wrapper for state changes with logging"""
@@ -156,7 +131,7 @@ class AudioPlayer:
             raise
 
     def play(self):
-        """Play or resume playback with proper resource management"""
+        """Play or resume playback"""
         self.logger.debug(f"Play requested. Current state: {self._state}")
         
         with self._state_lock:
@@ -166,7 +141,7 @@ class AudioPlayer:
                 
             if self._state == PlaybackState.PLAYING:
                 self.logger.debug("Already playing, ignoring play request")
-                return True  # Already playing is not an error
+                return True
                 
             if self._state not in [PlaybackState.LOADED, PlaybackState.PAUSED]:
                 self.logger.error(f"Invalid state for playback: {self._state}")
@@ -174,30 +149,12 @@ class AudioPlayer:
                 
             try:
                 with self._playback_lock:
-                    # Calculate remaining audio
-                    start_ms = int(self._position * 1000)
-                    if start_ms >= len(self.audio_segment):
-                        self.logger.debug("At end of audio, cannot play")
-                        return False
-                        
-                    # Prepare audio segment
-                    audio_to_play = self.audio_segment[start_ms:]
-                    if self._volume != 1.0:
-                        audio_to_play = audio_to_play.apply_gain(20 * np.log10(max(self._volume, 0.0001)))
-                    
-                    # Create playback stream
-                    self.stream = self._play_with_pyaudio(audio_to_play)
-                    if not self.stream or not self.stream.is_active():
+                    if self._play_audio(self.audio_segment):
+                        self.logger.debug(f"Playback successfully started, state: {self._state}")
+                        return True
+                    else:
                         raise RuntimeError("Failed to start playback")
-                    
-                    # Update state tracking
-                    self._playback_start_time = time.time()
-                    self._playback_start_position = self._position
-                    self._state = PlaybackState.PLAYING
-                    
-                    self.logger.debug(f"Playback successfully started, state: {self._state}")
-                    return True
-                
+                        
             except Exception as e:
                 self.logger.error(f"Playback error: {e}")
                 self._cleanup_playback()
@@ -268,37 +225,13 @@ class AudioPlayer:
             current_state = self._state
             self.logger.debug(f"Cleanup starting. Current state: {current_state}, preserve_state: {preserve_state}")
             
-            # Signal callback to stop
-            self._pending_cleanup = True
-            
-            # Stop and close stream if it exists
-            with self._stream_lock:
-                if self.stream:
-                    try:
-                        if self.stream.is_active():
-                            self.stream.stop_stream()
-                        self.stream.close()
-                    except Exception as e:
-                        self.logger.error(f"Stream closure error: {e}")
-                    finally:
-                        self.stream = None
-                
-                # Clean up wave file and buffer
-                if hasattr(self, '_wave_file'):
-                    try:
-                        self._wave_file.close()
-                    except Exception as e:
-                        self.logger.error(f"Wave file closure error: {e}")
-                    finally:
-                        self._wave_file = None
-                        
-                if hasattr(self, '_wav_buffer'):
-                    try:
-                        self._wav_buffer.close()
-                    except Exception as e:
-                        self.logger.error(f"Buffer closure error: {e}")
-                    finally:
-                        self._wav_buffer = None
+            try:
+                pygame.mixer.music.stop()
+                # Clean up temp file if it exists
+                if os.path.exists('temp_playback.mp3'):
+                    os.remove('temp_playback.mp3')
+            except Exception as e:
+                self.logger.error(f"Cleanup error: {e}")
             
             # Update position if playing
             if current_state == PlaybackState.PLAYING:
@@ -349,31 +282,11 @@ class AudioPlayer:
         return self._error_message if self._state == PlaybackState.ERROR else ""
         
     def __del__(self):
-        """Cleanup PyAudio instance on deletion"""
+        """Cleanup pygame mixer on deletion"""
         try:
-            self._pending_cleanup = True
-            with self._stream_lock:
-                if self.stream:
-                    try:
-                        if self.stream.is_active():
-                            self.stream.stop_stream()
-                        self.stream.close()
-                    except:
-                        pass
-                    finally:
-                        self.stream = None
-                
-                if hasattr(self, '_wave_file'):
-                    try:
-                        self._wave_file.close()
-                    except:
-                        pass
-                
-                if self.pyaudio_instance:
-                    try:
-                        self.pyaudio_instance.terminate()
-                    except:
-                        pass
+            pygame.mixer.quit()
+            if os.path.exists('temp_playback.mp3'):
+                os.remove('temp_playback.mp3')
         except:
             pass  # Suppress any errors during cleanup
 
