@@ -645,21 +645,18 @@ class RecordingFrame(ttk.Frame):
             self.transcript_text.insert(tk.END, text)
             self.transcript_text.see(tk.END)
             
-            # Process with LangChain placeholder
+            # Process with LangChain
             template = {
                 "name": self.template_var.get(),
-                "system": "You are an AI assistant analyzing meeting transcripts.",
-                "user": f"Analyze this meeting segment: {text}"
+                "system": "You are an AI assistant analyzing meeting transcripts in real-time. Focus on key points and be concise.",
+                "user": "Analyze this segment and provide:\n1. Key Points\n2. Action Items\n3. Decisions Made"
             }
             
-            response = f"[AI Analysis ({self.template_var.get()})]\n"
-            response += "This is a placeholder for LangChain processing.\n"
-            response += f"Template: {template['name']}\n"
-            response += f"Chunk length: {len(text)} characters\n\n"
+            result = self.langchain_service.process_chunk(text, template)
             
-            self.response_text.insert(tk.END, response)
-            self.response_text.see(tk.END)
-            
+            # Update AI Insights
+            self.insights_text.insert(tk.END, f"\n--- Analysis [{current_time}] ---\n{result}\n")
+            self.insights_text.see(tk.END)
             
             print(f"Processed chunk at {current_time}")  # Debug print
         except Exception as e:
