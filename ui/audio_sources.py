@@ -147,6 +147,27 @@ class RecordingFrame(ttk.Frame):
         
         # State variables for interval processing
         self.last_process_time = 0  # Tracks when we last processed text
+        
+        # Initialize LangChain service
+        self.langchain_service = LangChainService()
+        
+        # Create main container with paned window
+        self.paned_window = ttk.PanedWindow(self, orient=tk.HORIZONTAL)
+        self.paned_window.pack(fill=tk.BOTH, expand=True)
+        
+        # Left side - Recording controls and live transcript
+        self.left_frame = ttk.Frame(self.paned_window)
+        self.paned_window.add(self.left_frame, weight=1)
+        
+        # Right side - AI Insights
+        self.right_frame = ttk.Frame(self.paned_window)
+        self.paned_window.add(self.right_frame, weight=1)
+        
+        # Setup recording controls in left frame
+        self.setup_recording_controls(self.left_frame)
+        
+        # Setup AI Insights in right frame
+        self.setup_ai_insights(self.right_frame)
         self.accumulated_text = ""   # Holds text between processing intervals
         self.recent_frames = []      # Store recent audio frames for level monitoring
         
@@ -709,3 +730,62 @@ class RecordingFrame(ttk.Frame):
         if self.recording:
             self.stop_recording()
         self.master.destroy()
+    def setup_recording_controls(self, frame):
+        """Setup recording controls and transcript area"""
+        # Recording controls
+        self.controls_frame = ttk.Frame(frame)
+        self.controls_frame.pack(fill=tk.X, padx=5, pady=5)
+        
+        self.record_button = ttk.Button(
+            self.controls_frame,
+            text="Start Recording",
+            command=self.toggle_recording
+        )
+        self.record_button.pack(side=tk.LEFT, padx=5)
+        
+        # Dual purpose indicator
+        self.indicator = DualPurposeIndicator(self.controls_frame)
+        self.indicator.pack(side=tk.LEFT, padx=5)
+        
+        # Timer display
+        self.timer_var = tk.StringVar(value="00:00")
+        self.timer_label = ttk.Label(
+            self.controls_frame,
+            textvariable=self.timer_var,
+            font=('TkDefaultFont', 12)
+        )
+        self.timer_label.pack(side=tk.LEFT, padx=5)
+        
+        # Transcript area
+        transcript_frame = ttk.LabelFrame(frame, text="Live Transcript")
+        transcript_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
+        self.transcript_text = tk.Text(
+            transcript_frame,
+            wrap=tk.WORD,
+            height=10
+        )
+        self.transcript_text.pack(fill=tk.BOTH, expand=True)
+        
+        # Add scrollbar
+        transcript_scrollbar = ttk.Scrollbar(
+            transcript_frame,
+            orient=tk.VERTICAL,
+            command=self.transcript_text.yview
+        )
+        transcript_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.transcript_text.configure(yscrollcommand=transcript_scrollbar.set)
+
+    def setup_ai_insights(self, frame):
+        """Setup AI Insights panel"""
+        # Header
+        ttk.Label(frame, text="AI Insights", font=('TkDefaultFont', 12, 'bold')).pack(pady=5)
+        
+        # AI Insights text area
+        self.insights_text = tk.Text(frame, wrap=tk.WORD, height=20)
+        self.insights_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
+        # Add scrollbar
+        insights_scrollbar = ttk.Scrollbar(frame, orient=tk.VERTICAL, command=self.insights_text.yview)
+        insights_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.insights_text.configure(yscrollcommand=insights_scrollbar.set)

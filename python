@@ -2,18 +2,31 @@ from typing import List, Dict, Any
 import os
 from dotenv import load_dotenv
 
+from langchain.chat_models import ChatOpenAI
+from langchain.schema.messages import SystemMessage, HumanMessage
+from typing import List, Dict, Any
+import os
+from dotenv import load_dotenv
+
 class LangChainService:
-    """Placeholder for LangChain functionality"""
+    """Handles real-time processing of text chunks using LangChain"""
     
     def __init__(self):
         load_dotenv()
         self.api_key = os.getenv('OPENAI_API_KEY')
+        if not self.api_key:
+            raise ValueError("OpenAI API key not found in environment variables")
+            
+        self.llm = ChatOpenAI(
+            temperature=0.7,
+            openai_api_key=self.api_key
+        )
         self.context_window = []
         self.max_context_chunks = 5
         
     def process_chunk(self, chunk: str, template: Dict[str, str]) -> str:
         """
-        Process a chunk of text using LangChain (placeholder)
+        Process a chunk of text using LangChain
         
         Args:
             chunk: Text chunk to process
@@ -27,8 +40,17 @@ class LangChainService:
         if len(self.context_window) > self.max_context_chunks:
             self.context_window.pop(0)
             
-        # TODO: Implement actual LangChain processing
-        return f"[LangChain Placeholder] Processed chunk with template: {template['name']}\n\n{chunk}"
+        # Create messages for the chat model
+        messages = [
+            SystemMessage(content=template["system"]),
+            HumanMessage(content=f"{template['user']}\n\nContext (previous chunks):\n"
+                                f"{' '.join(self.context_window[:-1])}\n\n"
+                                f"Current chunk:\n{chunk}")
+        ]
+        
+        # Get response from LLM
+        response = self.llm(messages)
+        return response.content
         
     def get_available_templates(self) -> List[Dict[str, str]]:
         """Get list of available templates"""
