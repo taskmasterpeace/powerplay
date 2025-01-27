@@ -93,12 +93,11 @@ class AudioPlayer:
         
     def _play_with_pyaudio(self, audio_segment):
         """Play audio using PyAudio with proper stream management"""
-        wav_data = io.BytesIO()
-        audio_segment.export(wav_data, format="wav")
-        wav_data.seek(0)
+        self._wav_buffer = io.BytesIO()
+        audio_segment.export(self._wav_buffer, format="wav")
+        self._wav_buffer.seek(0)
         
-        wf = wave.open(wav_data, 'rb')
-        self._wave_file = wf  # Store reference to prevent GC
+        self._wave_file = wave.open(self._wav_buffer, 'rb')
         
         def callback(in_data, frame_count, time_info, status):
             try:
@@ -284,7 +283,7 @@ class AudioPlayer:
                     finally:
                         self.stream = None
                 
-                # Clean up wave file
+                # Clean up wave file and buffer
                 if hasattr(self, '_wave_file'):
                     try:
                         self._wave_file.close()
@@ -292,6 +291,14 @@ class AudioPlayer:
                         self.logger.error(f"Wave file closure error: {e}")
                     finally:
                         self._wave_file = None
+                        
+                if hasattr(self, '_wav_buffer'):
+                    try:
+                        self._wav_buffer.close()
+                    except Exception as e:
+                        self.logger.error(f"Buffer closure error: {e}")
+                    finally:
+                        self._wav_buffer = None
             
             # Update position if playing
             if current_state == PlaybackState.PLAYING:
