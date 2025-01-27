@@ -9,6 +9,7 @@ from pydub import AudioSegment
 from utils.audio_recorder import AudioRecorder
 from services.assemblyai_realtime import AssemblyAIRealTimeTranscription
 from ui.components import DualPurposeIndicator
+from python.LangChainService import LangChainService
 
 class AudioSourceFrame(ttk.LabelFrame):
     def __init__(self, master, app):
