@@ -1,7 +1,7 @@
 from typing import List, Dict, Any
 import os
 from dotenv import load_dotenv
-from langchain.chat_models import ChatOpenAI
+from langchain_community.chat_models import ChatOpenAI
 from langchain.schema.messages import SystemMessage, HumanMessage
 
 class LangChainService:
